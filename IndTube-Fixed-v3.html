@@ -1,0 +1,2289 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f0f0f">
+<title>IndTube - India Ka Apna Video Platform</title>
+<style>
+:root {
+  --bg: #0f0f0f;
+  --surface: #181818;
+  --surface-hover: #272727;
+  --border: rgba(255, 255, 255, 0.12);
+  --text: #ffffff;
+  --text-secondary: #aaaaaa;
+  --accent-orange: #ff9933;
+  --accent-green: #138808;
+  --brand-gradient: linear-gradient(135deg, #ff9933 0%, #ffffff 50%, #138808 100%);
+}
+
+html { scroll-behavior: smooth; }
+body.light-theme { --bg:#f5f5f5; --surface:#ffffff; --surface-hover:#eaeaea; --border:rgba(0,0,0,.12); --text:#171717; --text-secondary:#626262; }
+body.light-theme .top-header { background:rgba(255,255,255,.97); }
+body.light-theme .brand-logo, body.light-theme .meta-info h3 { color:#171717; }
+body.light-theme .chip { color:#222; background:#e9e9e9; }
+body.light-theme .setting-group, body.light-theme .user-card { background:#fff; color:#171717; }
+body.search-page-open #categoryBar, body.search-page-open #homeFeedSection { display:none !important; }
+body.search-page-open .top-header { position:sticky; top:0; }
+/* Keep the exact same iframe node alive in mini mode; never detach/recreate it. */
+#watchSection.mini-mode { display:block !important; position:fixed !important; z-index:1200 !important; left:50%; right:auto; bottom:calc(78px + env(safe-area-inset-bottom)); top:auto; transform:translateX(-50%); width:min(82vw,360px); min-width:250px; max-width:360px; height:auto; margin:0; padding:0; background:#050505; border:1px solid rgba(255,255,255,.28); border-radius:12px; overflow:hidden; box-shadow:0 8px 26px rgba(0,0,0,.72); }
+#watchSection.mini-mode .watch-container { width:100%; padding:0; }
+#watchSection.mini-mode .sticky-player-wrapper { position:relative; top:auto; width:100%; aspect-ratio:16/9; box-shadow:none; }
+#watchSection.mini-mode .watch-meta, #watchSection.mini-mode .watch-container > :not(.sticky-player-wrapper) { display:none !important; }
+#watchSection.mini-mode .mini-inline-controls { display:flex; }
+#watchSection.mini-mode .mini-inline-controls { touch-action:none; }
+#watchSection.mini-mode .sticky-player-wrapper { touch-action:pan-y; }
+.mini-inline-controls { display:none; position:absolute; z-index:1250; top:0; left:0; right:0; height:34px; align-items:center; justify-content:space-between; padding:2px 7px; background:rgba(0,0,0,.88); color:#fff; font-size:12px; cursor:grab; user-select:none; -webkit-user-select:none; touch-action:none; }
+.mini-inline-controls button { border:0; border-radius:50%; width:25px; height:25px; color:#fff; background:#444; font-size:15px; touch-action: manipulation; }
+@media (min-width:601px) { #watchSection.mini-mode { width:min(46vw,420px); min-width:300px; max-width:420px; bottom:24px; } }
+button, .video-card, .chip { touch-action: manipulation; }
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; -webkit-tap-highlight-color: transparent; }
+body { background-color: var(--bg); color: var(--text); overflow-x: hidden; padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
+
+/* Top Navigation Header */
+.top-header {
+  position: sticky; top: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 14px; background-color: rgba(15, 15, 15, 0.98);
+  backdrop-filter: blur(12px); border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  height: 56px; gap: 8px;
+  transition: padding .22s ease, box-shadow .22s ease;
+}
+.brand-logo {
+  display: flex; align-items: center; gap: 6px; font-weight: 800; font-size: 19px;
+  text-decoration: none; color: #fff; letter-spacing: -0.5px; cursor: pointer; flex-shrink: 0;
+}
+.flag-badge {
+  display: inline-flex; flex-direction: column; width: 18px; height: 13px; border-radius: 2px; overflow: hidden;
+}
+.flag-badge span:nth-child(1) { background: #ff9933; height: 33.3%; }
+.flag-badge span:nth-child(2) { background: #ffffff; height: 33.3%; }
+.flag-badge span:nth-child(3) { background: #138808; height: 33.3%; }
+
+.brand-logo b { color: var(--accent-orange); }
+.brand-logo span.in-tag { font-size: 10px; background: rgba(255,153,51,0.2); color: #ffb15a; border: 1px solid rgba(255,153,51,0.4); padding: 1px 4px; border-radius: 4px; margin-left: 2px; }
+
+.header-search {
+  display: flex; align-items: center; flex: 1 1 260px; min-width: 0; max-width: 520px; position: relative;
+  transition: max-width .25s ease, flex .25s ease;
+}
+.header-search input {
+  width: 100%; background: #121212; border: 1px solid var(--border);
+  min-width: 0; padding: 9px 42px 9px 14px; border-radius: 20px; color: #fff; font-size: 14px; outline: none;
+  transition: border-color .2s ease, background .2s ease, box-shadow .2s ease;
+}
+.header-search input:focus { border-color: var(--accent-orange); background:#191919; box-shadow:0 0 0 2px rgba(255,153,51,.12); }
+.top-header.search-expanded .header-search { max-width: none; flex: 1 1 100%; }
+.top-header.search-expanded .brand-logo,
+.top-header.search-expanded .header-icons { display:none; }
+.top-header.search-expanded { padding-left:10px; padding-right:10px; }
+.top-header.search-expanded .header-search input { font-size:16px; padding-top:10px; padding-bottom:10px; }
+@media (min-width:601px) {
+  .top-header.search-expanded .brand-logo,
+  .top-header.search-expanded .header-icons { display:flex; }
+  .top-header.search-expanded .header-search { max-width:720px; }
+}
+.search-icon-btn { position: absolute; right: 10px; background: none; border: none; color: var(--text-secondary); cursor: pointer; font-size: 14px; padding: 4px; }
+
+.header-icons { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.icon-btn { background: none; border: none; color: #fff; font-size: 18px; cursor: pointer; padding: 8px; border-radius: 50%; display: grid; place-items: center; }
+.icon-btn:hover { background: var(--surface-hover); }
+
+/* Category Pills Bar */
+.category-bar {
+  display: flex; gap: 8px; padding: 10px 14px; overflow-x: auto;
+  scrollbar-width: none; background: var(--bg); position: sticky; top: 56px; z-index: 90;
+}
+.category-bar::-webkit-scrollbar { display: none; }
+.chip {
+  padding: 6px 14px; background: var(--surface); border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 8px; font-size: 13px; font-weight: 600; white-space: nowrap; color: #fff; cursor: pointer; transition: 0.2s;
+}
+.chip.active { background: #ffffff; color: #0f0f0f; border-color: #fff; }
+
+/* Main Views Container */
+.view-section { display: none; }
+.view-section.active { display: block; }
+
+/* Home / Video Feed Layout */
+.feed-container { padding: 12px 14px; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 18px; }
+.video-card { display: flex; flex-direction: column; gap: 10px; cursor: pointer; border-radius: 12px; overflow: hidden; background: var(--surface); padding-bottom: 8px; transition: transform 0.2s; }
+.video-card:hover { transform: translateY(-2px); }
+.thumbnail-box { position: relative; width: 100%; aspect-ratio: 16/9; background: #202020; overflow: hidden; }
+.thumbnail-box img { width: 100%; height: 100%; object-fit: cover; }
+.video-details { display: flex; gap: 12px; padding: 8px 10px; }
+.channel-avatar img { width:100%; height:100%; object-fit:cover; display:block; }
+.channel-avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--brand-gradient); flex-shrink: 0; display: grid; place-items: center; font-weight: bold; color: #000; overflow: hidden; font-size: 14px; }
+.meta-info { display: flex; flex-direction: column; gap: 3px; }
+.meta-info h3 { font-size: 14px; font-weight: 600; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; color: #fff; }
+.meta-info p { font-size: 12px; color: var(--text-secondary); }
+
+/* YouTube Watch Screen Style with Fixed Sticky Video */
+.watch-container { width: 100%; max-width: 900px; margin: 0 auto; padding: 0 0 20px 0; }
+
+.sticky-player-wrapper {
+  position: sticky;
+  top: 0;
+  z-index: 140;
+  width: 100%;
+  aspect-ratio: 16/9;
+  background: #000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+}
+
+.sticky-player-wrapper iframe, .sticky-player-wrapper video { width: 100%; height: 100%; border: none; display:block; }
+
+/* Floating, draggable long-video mini player */
+.mini-player {
+  position: fixed; left: 50%; bottom: calc(82px + env(safe-area-inset-bottom)); transform: translateX(-50%);
+  z-index: 500; width: min(34vw, 190px); min-width: 128px; aspect-ratio: 16 / 9;
+  background: #050505; border: 1px solid rgba(255,255,255,.22);
+  border-radius: 12px; overflow: hidden; box-shadow: 0 8px 28px rgba(0,0,0,.65);
+  display: flex; flex-direction: column; touch-action: none;
+}
+.mini-player[hidden] { display: none !important; }
+.mini-player-handle {
+  height: 18px; flex: 0 0 18px; display: flex; align-items: center;
+  justify-content: space-between; gap: 6px; padding: 0 5px;
+  background: #202020; color: #fff; font-size: 9px; cursor: grab;
+  user-select: none; touch-action: none;
+}
+.mini-player-handle:active { cursor: grabbing; }
+.mini-player-controls { display:flex; align-items:center; gap:4px; }
+.mini-player-controls button {
+  border:0; color:#fff; background:#383838; border-radius:50%;
+  width:16px; height:16px; line-height:16px; text-align:center;
+  font-size:12px; cursor:pointer; padding:0;
+}
+.mini-player-video { min-height:0; flex:1; background:#000; }
+.mini-player-video iframe { width:100%; height:100%; border:0; display:block; }
+@media (min-width:601px) {
+  .mini-player { width: min(24vw, 210px); min-width: 150px; bottom: 24px; }
+}
+
+.watch-meta { padding: 12px 14px; }
+.watch-title { display:block; width:100%; text-align:left; border:0; background:transparent; color:var(--text); font-size:17px; font-weight:700; line-height:1.3; margin-bottom:6px; cursor:pointer; }
+.video-description-panel { white-space:pre-wrap; overflow-wrap:anywhere; background:var(--surface-hover); border:1px solid var(--border); border-radius:10px; padding:12px; margin:8px 0 12px; color:var(--text); font-size:13px; line-height:1.5; }
+.watch-subtext { font-size: 12px; color: var(--text-secondary); margin-bottom: 12px; }
+
+/* Actions Bar */
+.action-buttons-row {
+  display: flex; gap: 8px; overflow-x: auto; padding-bottom: 10px; scrollbar-width: none; margin-bottom: 14px;
+}
+.action-buttons-row::-webkit-scrollbar { display: none; }
+
+.action-pill {
+  display: flex; align-items: center; gap: 6px; padding: 8px 14px;
+  background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px; font-size: 13px; font-weight: 600; color: #fff; cursor: pointer; white-space: nowrap; transition: 0.2s;
+}
+.action-pill:hover, .action-pill.active { background: rgba(255, 255, 255, 0.2); border-color: #fff; }
+.action-pill.liked { color: var(--accent-orange); border-color: var(--accent-orange); }
+
+/* Horizontal Shorts Carousel Section in Video Scroll */
+.shorts-shelf { margin: 16px 0; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+.shorts-shelf-title { display: flex; align-items: center; gap: 6px; font-size: 16px; font-weight: 700; margin-bottom: 12px; }
+.shorts-shelf-title svg { fill: #ff0000; width: 22px; height: 22px; }
+.shorts-carousel-row { display: flex; gap: 10px; overflow-x: auto; scrollbar-width: none; }
+.shorts-carousel-row::-webkit-scrollbar { display: none; }
+.short-shelf-card { flex: 0 0 140px; aspect-ratio: 9/16; position: relative; border-radius: 12px; overflow: hidden; background: var(--surface); cursor: pointer; }
+.short-shelf-card img { width: 100%; height: 100%; object-fit: cover; }
+.short-shelf-info { position: absolute; inset: 0; background: linear-gradient(180deg, transparent 50%, rgba(0,0,0,0.85) 100%); display: flex; flex-direction: column; justify-content: flex-end; padding: 8px; color: #fff; }
+.short-shelf-info h4 { font-size: 12px; font-weight: 600; line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-bottom: 3px; }
+.short-shelf-info span { font-size: 10px; color: #ccc; }
+
+/* Channel Card & Subscribe Bell Options */
+.channel-row-card {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 14px; background: var(--surface); border-radius: 12px; border: 1px solid var(--border); margin-bottom: 16px; position: relative;
+}
+.channel-info-left { display: flex; align-items: center; gap: 12px; }
+.channel-logo-img { width: 42px; height: 42px; border-radius: 50%; overflow: hidden; background: var(--brand-gradient); display: grid; place-items: center; font-weight: bold; color: #000; }
+.channel-logo-img img { width: 100%; height: 100%; object-fit: cover; }
+.channel-text-info h4 { font-size: 15px; font-weight: 700; }
+.channel-text-info p { font-size: 12px; color: var(--text-secondary); }
+
+.subscribe-wrapper { position: relative; }
+.subscribe-btn {
+  background: #fff; color: #000; border: none; padding: 8px 16px; border-radius: 20px; font-weight: 700; font-size: 13px; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 6px;
+}
+.subscribe-btn.subscribed { background: rgba(255, 255, 255, 0.15); color: #fff; border: 1px solid var(--border); }
+
+/* Subscribe Options Dropdown */
+.sub-dropdown {
+  position: absolute; right: 0; top: 42px; background: #212121; border: 1px solid var(--border);
+  border-radius: 12px; width: 180px; display: none; flex-direction: column; z-index: 120; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+}
+.sub-dropdown.active { display: flex; }
+.sub-option {
+  display: flex; align-items: center; gap: 10px; padding: 10px 14px; font-size: 13px; color: #fff; cursor: pointer; transition: background 0.2s;
+}
+.sub-option:hover { background: rgba(255,255,255,0.1); }
+
+/* Comments Section */
+.comments-section {
+  background: var(--surface); border-radius: 12px; border: 1px solid var(--border); padding: 14px; margin-bottom: 20px;
+}
+.comments-header {
+  width: 100%; background: transparent; border: 0; color: inherit; padding: 0;
+  font: inherit; font-size: 14px; font-weight: 700; margin: 0;
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  text-align: left; cursor: pointer;
+}
+.comments-toggle-indicator { color: var(--text-secondary); font-size: 18px; }
+.comments-section #commentsContent { margin-top: 12px; }
+.comments-section #commentsContent[hidden] { display: none; }
+.add-comment-box { display: flex; gap: 10px; margin-bottom: 16px; }
+.add-comment-box input {
+  flex: 1; background: #0f0f0f; border: 1px solid var(--border); border-radius: 20px; padding: 8px 14px; color: #fff; font-size: 13px; outline: none;
+}
+.add-comment-box input:focus { border-color: var(--accent-orange); }
+.add-comment-box button {
+  background: var(--accent-orange); color: #000; border: none; padding: 8px 14px; border-radius: 20px; font-weight: 700; font-size: 12px; cursor: pointer;
+}
+.comments-list { display: flex; flex-direction: column; gap: 12px; max-height: 250px; overflow-y: auto; }
+.comment-item { display: flex; gap: 10px; font-size: 13px; }
+.comment-user-avatar { width: 28px; height: 28px; border-radius: 50%; background: #333; display: grid; place-items: center; font-size: 11px; flex-shrink: 0; }
+.comment-body h5 { font-size: 12px; color: var(--text-secondary); margin-bottom: 2px; }
+
+/* You / Profile & Settings Section */
+.profile-section { padding: 16px; max-width: 600px; margin: 0 auto; }
+.user-card { display: flex; align-items: center; gap: 14px; background: var(--surface); padding: 16px; border-radius: 16px; border: 1px solid var(--border); margin-bottom: 20px; }
+.user-avatar-lg { width: 60px; height: 60px; border-radius: 50%; background: var(--brand-gradient); color: #000; font-weight: bold; font-size: 24px; display: grid; place-items: center; }
+.user-details h3 { font-size: 18px; margin-bottom: 2px; }
+.user-details p { font-size: 13px; color: var(--text-secondary); }
+
+.google-login-btn {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  width: 100%; padding: 12px; background: #fff; color: #000; border: none;
+  border-radius: 24px; font-weight: 700; font-size: 14px; cursor: pointer; margin-bottom: 20px;
+}
+.google-icon { width: 18px; height: 18px; }
+
+.action-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 24px; }
+.list-item {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px; background: var(--surface); border-radius: 12px; cursor: pointer; border: 1px solid var(--border); font-size: 14px; font-weight: 600;
+}
+.list-item:hover { background: var(--surface-hover); }
+.list-item-left { display: flex; align-items: center; gap: 12px; }
+
+/* Settings Sub-Panel */
+.settings-panel { display: flex; flex-direction: column; gap: 12px; }
+.setting-group { background: var(--surface); border-radius: 12px; border: 1px solid var(--border); padding: 14px; }
+.setting-group h4 { font-size: 14px; color: var(--accent-orange); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+.setting-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 13px; }
+.setting-row:last-child { border-bottom: none; }
+
+/* Switch Toggle */
+.switch { position: relative; display: inline-block; width: 40px; height: 22px; }
+.switch input { opacity: 0; width: 0; height: 0; }
+.slider { position: absolute; cursor: pointer; inset: 0; background-color: #444; transition: .4s; border-radius: 22px; }
+.slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+input:checked + .slider { background-color: var(--accent-orange); }
+input:checked + .slider:before { transform: translateX(18px); }
+
+/* Bottom Sheet Modal for Upload Options */
+.bottom-sheet-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 250; display: none; align-items: flex-end;
+}
+.bottom-sheet-overlay.active { display: flex; }
+.bottom-sheet {
+  background: var(--surface); border-top-left-radius: 20px; border-top-right-radius: 20px;
+  width: 100%; padding: 20px; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 14px;
+  animation: slideUp 0.3s ease-out;
+}
+@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
+.sheet-title { font-size: 16px; font-weight: 700; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; }
+.sheet-option {
+  display: flex; align-items: center; gap: 14px; padding: 12px; background: rgba(255,255,255,0.05);
+  border-radius: 12px; font-weight: 600; cursor: pointer; transition: 0.2s; border: 1px solid transparent;
+}
+.sheet-option:hover { background: rgba(255,255,255,0.1); border-color: var(--accent-orange); }
+.sheet-option-icon { font-size: 20px; width: 36px; height: 36px; border-radius: 50%; background: #2a2a2a; display: grid; place-items: center; }
+
+/* Shorts viewer: Reels-style layout matching the supplied orange outline */
+.shorts-viewer {
+  position: fixed; inset: 0; background: #000; z-index: 200; display: none;
+  flex-direction: column; justify-content: flex-start; align-items: center;
+}
+.shorts-viewer.active { display: flex; }
+.shorts-stage { position: relative; width: 100%; max-width: 520px; height: calc(100% - 76px); flex: 1 1 auto; min-height: 0; background: #111; overflow: hidden; touch-action: pan-x; }
+.shorts-iframe-box { position:absolute; inset:0; width:100%; height:100%; }
+.shorts-iframe-box iframe { width:100%; height:100%; border:0; }
+.shorts-topbar { position:absolute; z-index:12; top: max(12px, env(safe-area-inset-top)); left:12px; }
+.shorts-back-btn { width:42px; height:42px; border:0; border-radius:50%; color:#fff; background:rgba(0,0,0,.38); font-size:27px; display:grid; place-items:center; cursor:pointer; }
+.shorts-actions-bar { position:absolute; right:10px; bottom:105px; display:flex; flex-direction:column; gap:13px; align-items:center; z-index:12; }
+.short-action-btn { background:transparent; border:0; color:#fff; min-width:48px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; font-size:27px; text-shadow:0 1px 5px #000; cursor:pointer; padding:2px; }
+.short-action-btn span { font-size:12px; font-weight:600; text-shadow:0 1px 5px #000; }
+.shorts-bottom-info { position:absolute; left:16px; right:76px; bottom:18px; z-index:11; color:#fff; text-shadow:0 1px 5px #000; }
+.shorts-creator-row { display:flex; align-items:center; gap:9px; margin-bottom:10px; }
+.shorts-avatar { width:38px; height:38px; border-radius:50%; background:linear-gradient(135deg,#ff9933,#fff,#138808); color:#111; display:grid; place-items:center; font-weight:800; text-shadow:none; flex-shrink:0; }
+.shorts-creator-name { font-size:14px; font-weight:700; max-width:155px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+.shorts-follow-btn { border:1px solid rgba(255,255,255,.8); background:rgba(0,0,0,.25); color:#fff; border-radius:18px; padding:6px 13px; font-size:12px; font-weight:700; }
+.shorts-caption { font-size:14px; line-height:1.35; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+.shorts-audio { font-size:12px; margin-top:7px; opacity:.95; }
+.shorts-comment-footer { width:100%; max-width:520px; height:76px; flex:0 0 76px; display:flex; align-items:center; padding:10px 18px; background:#080808; }
+.shorts-comment-input { width:100%; height:48px; border:1px solid rgba(255,255,255,.14); border-radius:28px; background:#242424; color:#fff; padding:0 18px; font-size:14px; outline:none; }
+.shorts-comment-input::placeholder { color:#ddd; }
+.short-comments-panel { display:none; position:absolute; z-index:30; left:0; right:0; bottom:76px; max-width:520px; margin:auto; height:min(58%,480px); background:#171717; color:#fff; border-radius:18px 18px 0 0; padding:14px; flex-direction:column; box-shadow:0 -8px 30px #0009; }
+.short-comments-panel.open { display:flex; }
+.short-comments-head { display:flex; justify-content:space-between; align-items:center; padding-bottom:12px; border-bottom:1px solid #444; }
+.short-comments-head button { background:none; color:#fff; border:0; font-size:20px; }
+.short-comments-list { flex:1; overflow:auto; padding:12px 0; display:flex; flex-direction:column; gap:12px; font-size:13px; }
+.short-comments-compose { display:flex; gap:8px; }
+.short-comments-compose input { flex:1; min-width:0; border:1px solid #555; background:#292929; color:#fff; border-radius:22px; padding:11px 14px; }
+.short-comments-compose button { border:0; background:#ff9933; color:#111; border-radius:22px; padding:0 16px; font-weight:700; }
+#shortsGestureZone { position:absolute; z-index:9; inset:0; background:transparent; touch-action:pan-x; }
+@media (min-width:600px) { .shorts-stage,.shorts-comment-footer { max-width:420px; } }
+
+
+/* Reels-style more menu */
+.short-more-wrap{position:absolute;right:14px;bottom:18px;z-index:18}
+.short-more-btn{width:46px;height:42px;border:0;border-radius:22px;background:rgba(25,25,25,.72);color:#fff;font-size:29px;line-height:1;letter-spacing:1px;display:grid;place-items:center;cursor:pointer;text-shadow:0 1px 5px #000}
+.short-more-menu{display:none;position:absolute;right:0;bottom:50px;width:min(260px,calc(100vw - 40px));padding:7px;background:#202020;border:1px solid #444;border-radius:15px;box-shadow:0 8px 28px #000b;color:#fff}
+.short-more-menu.open{display:block}
+.short-more-menu button{width:100%;display:flex;align-items:center;gap:12px;text-align:left;padding:13px 12px;border:0;border-radius:9px;background:transparent;color:#fff;font-size:14px;cursor:pointer}
+.short-more-menu button:active,.short-more-menu button:hover{background:#383838}
+.short-more-menu button .mi{width:22px;text-align:center;font-size:18px}
+.short-more-divider{height:1px;background:#444;margin:5px 4px}
+#shortMoreToast{position:absolute;z-index:40;left:50%;bottom:92px;transform:translateX(-50%);max-width:85%;padding:10px 15px;border-radius:22px;background:#eee;color:#111;font-size:13px;display:none;text-align:center;box-shadow:0 3px 15px #0008}
+#shortMoreToast.show{display:block}
+
+/* Fixed Bottom Navigation Bar */
+.bottom-nav {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  height: calc(76px + env(safe-area-inset-bottom));
+  padding: 5px 4px calc(5px + env(safe-area-inset-bottom));
+  background: rgba(7, 8, 12, 0.99); backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,0.10); border-bottom: 0;
+  border-radius: 25px 25px 0 0;
+  display: flex; justify-space-around; align-items: center;
+  z-index: 100; box-shadow: 0 -8px 28px rgba(0,0,0,0.28);
+}
+.nav-item {
+  display: flex; flex: 1; height: 100%; flex-direction: column; align-items: center;
+  justify-content: center; gap: 5px; color: #d5d7df;
+  text-decoration: none; font-size: 11px; font-weight: 500;
+  border: none; background: none; cursor: pointer; min-width: 0;
+}
+.nav-item.active { color: #fff; }
+.nav-item .nav-icon { width: 25px; height: 25px; display: grid; place-items: center; color: currentColor; }
+.nav-item .nav-icon svg { width: 24px; height: 24px; display: block; }
+.nav-item.active#navShorts { color: #ffad55; }
+.nav-item.active#navShorts .nav-icon { position: relative; }
+.nav-item.active#navShorts .nav-icon svg { opacity: 0; }
+.nav-item.active#navShorts .nav-icon::before {
+  content: ''; width: 27px; height: 8px; background: #ffad55;
+  transform: skewX(-24deg); border-radius: 1px;
+}
+.nav-item.create-btn .nav-icon {
+  width: 52px; height: 52px; border-radius: 50%;
+  background: #20232d; border: 1px solid rgba(255,255,255,0.10);
+  color: #fff; margin-top: -9px;
+}
+.nav-item.create-btn .nav-icon svg { width: 30px; height: 30px; }
+.nav-item.create-btn { gap: 3px; }
+.nav-item:focus-visible { outline: 2px solid #ffad55; outline-offset: -3px; border-radius: 12px; }
+
+/* Loader & Modals */
+.loader-box { grid-column: 1/-1; text-align: center; padding: 50px 0; color: var(--text-secondary); }
+.spinner { width: 36px; height: 36px; border: 4px solid var(--surface); border-top-color: var(--accent-orange); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 12px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 300; display: none; place-items: center; padding: 20px; }
+.modal-overlay.active { display: grid; }
+.modal-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 20px; width: 100%; max-width: 400px; }
+.modal-card h2 { margin-bottom: 12px; font-size: 18px; }
+.modal-card input { width: 100%; padding: 10px; margin-bottom: 12px; background: #000; border: 1px solid var(--border); border-radius: 8px; color: #fff; }
+.btn-primary { width: 100%; padding: 10px; background: var(--accent-orange); border: none; border-radius: 8px; color: #000; font-weight: 700; cursor: pointer; }
+.close-modal-btn { background: none; border: none; color: #fff; float: right; font-size: 20px; cursor: pointer; }
+
+
+/* Search suggestions + voice search */
+.header-search { position:relative; }
+.search-suggestions {
+  display:none; position:absolute; top:calc(100% + 10px); left:0; right:-58px;
+  z-index:1000; max-height:min(62vh,520px); overflow-y:auto;
+  background:#202020; color:#fff; border:1px solid rgba(255,255,255,.12);
+  border-radius:14px; box-shadow:0 12px 32px rgba(0,0,0,.55); padding:8px 0;
+}
+.search-suggestions.show { display:block; }
+.search-suggestion-row { display:flex; align-items:center; gap:12px; min-height:46px; padding:8px 14px; cursor:pointer; }
+.search-suggestion-row:active { background:#333; }
+.search-suggestion-row .ss-icon { width:22px; flex:0 0 22px; color:#aaa; text-align:center; }
+.search-suggestion-row .ss-label { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:14px; }
+.search-suggestion-row img { width:58px; height:36px; object-fit:cover; border-radius:5px; }
+.search-suggestion-heading { padding:8px 14px 4px; color:#aaa; font-size:12px; }
+.header-search .voice-search-btn { border:0; color:#ddd; background:transparent; font-size:19px; padding:6px; cursor:pointer; }
+.header-search.listening .voice-search-btn { color:#ff5555; animation:voicePulse 1s infinite; }
+@keyframes voicePulse { 50% { transform:scale(1.18); opacity:.55; } }
+@media(max-width:600px) { .search-suggestions { right:-52px; } }
+
+@media (max-width: 600px) {
+  .feed-container { grid-template-columns: 1fr; padding: 8px; gap: 14px; }
+}
+</style>
+</head>
+<body>
+
+<!-- Header Bar -->
+<header class="top-header" id="topHeader">
+  <a class="brand-logo" onclick="switchTab('home')">
+    <span class="flag-badge"><span></span><span></span><span></span></span>
+    Ind<b>Tube</b><span class="in-tag">INDIA</span>
+  </a>
+  <div class="header-search" id="headerSearchBox">
+    <input type="search" id="searchInput" placeholder="Search IndTube..." autocomplete="off" enterkeyhint="search" aria-label="Search IndTube" onfocus="expandSearch()" onblur="collapseSearch()" oninput="handleSearchInput()" onkeydown="handleSearchKey(event)">
+    <button class="search-icon-btn" onclick="executeSearch()" aria-label="Search">🔍</button>
+    <button class="voice-search-btn" onclick="startVoiceSearch()" aria-label="Voice search" title="Voice search">🎙️</button>
+    <div class="search-suggestions" id="searchSuggestions" onmousedown="event.preventDefault()"></div>
+  </div>
+  <div class="header-icons">
+    <button class="icon-btn" onclick="openNotifications()">🔔</button>
+    <button class="icon-btn" onclick="switchTab('you')">👤</button>
+  </div>
+</header>
+
+<!-- Category Pills Bar -->
+<nav class="category-bar" id="categoryBar">
+  <button class="chip active" onclick="filterCategory(this, 'All')">All</button>
+  <button class="chip" onclick="filterCategory(this, 'Shorts')">⚡ Shorts</button>
+  <button class="chip" onclick="filterCategory(this, 'Music')">Music</button>
+  <button class="chip" onclick="filterCategory(this, 'Gaming')">Gaming</button>
+  <button class="chip" onclick="filterCategory(this, 'Tech')">Tech</button>
+  <button class="chip" onclick="filterCategory(this, 'Motu Patlu')">Motu Patlu</button>
+  <button class="chip" onclick="filterCategory(this, 'News')">News</button>
+</nav>
+
+<!-- View 1: Home Feed / Search Results -->
+<section class="view-section active" id="homeFeedSection">
+  <div id="searchResultsHeader" hidden style="padding:14px 16px 4px">
+    <div style="font-size:18px;font-weight:700;margin-bottom:10px">Search results</div>
+    <div id="relatedSearches" style="display:flex;flex-wrap:wrap;gap:8px"></div>
+  </div>
+  <main class="feed-container" id="feedContainer">
+    <div class="loader-box">
+      <div class="spinner"></div>
+      <p>Loading videos...</p>
+    </div>
+  </main>
+</section>
+
+<!-- View 2: Player Screen (Sticky Video UI) -->
+<section class="view-section" id="watchSection">
+  <div class="watch-container">
+    
+    <!-- Top Fixed/Sticky Video Frame -->
+    <div class="sticky-player-wrapper" id="mainPlayerContainer"></div>
+    
+    <!-- Scrollable Video Meta & Recommendations Container -->
+    <div class="watch-meta">
+      <button class="watch-title" id="watchVideoTitle" type="button" onclick="toggleVideoDescription()" aria-expanded="false">Video Title Loading... ▾</button>
+      <div class="video-description-panel" id="videoDescriptionPanel" hidden><p id="videoDescriptionText"></p></div>
+      <p class="watch-subtext" id="watchVideoSubtext">IndTube • Searching video details...</p>
+
+      <!-- Channel Row Card -->
+      <div class="channel-row-card">
+        <div class="channel-info-left">
+          <div class="channel-logo-img" id="channelAvatarBox">I</div>
+          <div class="channel-text-info">
+            <h4 id="channelNameTag">IndTube Channel</h4>
+            <p id="channelSubTag">YouTube channel</p>
+          </div>
+        </div>
+        
+        <div class="subscribe-wrapper">
+          <button class="subscribe-btn" id="subBtn" onclick="handleSubscribeClick()">
+            <span id="subBtnIcon"></span><span id="subBtnText">Subscribe</span>
+          </button>
+          
+          <div class="sub-dropdown" id="subDropdown">
+            <div class="sub-option" onclick="setSubscriptionState('all')">🔔 All Notifications</div>
+            <div class="sub-option" onclick="setSubscriptionState('personalized')">🔕 Personalized</div>
+            <div class="sub-option" onclick="setSubscriptionState('none')">🔕 None</div>
+            <div class="sub-option" style="color: #ff5555;" onclick="setSubscriptionState('unsubscribe')">❌ Unsubscribe</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Row Bar -->
+      <div class="action-buttons-row">
+        <button class="action-pill" id="likeBtn" onclick="toggleLike()">
+          👍 <span id="likeCount">0</span>
+        </button>
+        <button class="action-pill" id="dislikeBtn" onclick="toggleDislike()">
+          👎 Dislike
+        </button>
+        <button class="action-pill" onclick="shareVideo()">
+          ↗️ Share
+        </button>
+        <button class="action-pill" onclick="scrollComments()">
+          💬 Comment <span id="commentCountTag">0</span>
+        </button>
+        <button class="action-pill" id="saveBtn" onclick="toggleSaveWatchLater()">
+          ➕ Watch Later
+        </button>
+        <button class="action-pill" onclick="alert('YouTube video downloads are controlled by YouTube. Use the official Download option where available.')">
+          ⬇️ Download
+        </button>
+      </div>
+
+      <!-- Horizontal Shorts Shelf (YouTube App Style) -->
+      <div class="shorts-shelf" id="shortsShelfSection">
+        <div class="shorts-shelf-title">
+          <svg viewBox="0 0 24 24"><path d="M17.77 10.32l-1.2-.5L18 9.06c1.84-.96 2.53-3.23 1.56-5.06s-3.24-2.53-5.07-1.56L6 6.84c-1.29.68-2.07 2.04-2 3.49.07 1.42.93 2.67 2.22 3.25l1.2.51-1.43.76c-1.84.96-2.53 3.23-1.56 5.06s3.24 2.53 5.07 1.56l8.43-4.4c1.29-.68 2.07-2.04 2-3.49-.07-1.42-.93-2.67-2.22-3.25zM10 14.5v-5l4.5 2.5L10 14.5z"/></svg>
+          <span>Shorts</span>
+        </div>
+        <div class="shorts-carousel-row" id="shortsCarouselContainer">
+          <!-- Loaded dynamically -->
+        </div>
+      </div>
+
+      <!-- Comments Section -->
+      <div class="comments-section" id="commentsSection">
+        <button class="comments-header" id="commentsToggle" type="button"
+          aria-expanded="false" aria-controls="commentsContent" onclick="toggleCommentsSection()">
+          <span>💬 Comments (<span id="commentTotal">2</span>)</span>
+          <span class="comments-toggle-indicator" id="commentsToggleIndicator">＋</span>
+        </button>
+        <div id="commentsContent" hidden>
+        <div class="add-comment-box">
+          <input type="text" id="newCommentInput" placeholder="Add a comment on this video...">
+          <button onclick="postComment()">Post</button>
+        </div>
+        <div class="comments-list" id="commentsList">
+          <div class="comment-item">
+            <div class="comment-user-avatar">🇮🇳</div>
+            <div class="comment-body">
+              <h5>Aman Sharma • 1 hour ago</h5>
+              <p>Awesome video! High quality content on IndTube platform 👍</p>
+            </div>
+          </div>
+        </div>
+        </div>
+      </div>
+
+      <!-- Related Videos Recommendations -->
+      <h3 style="font-size:16px; margin: 16px 0 10px 0;">Related Videos</h3>
+      <div class="feed-container" id="relatedFeedContainer" style="padding:0;"></div>
+    </div>
+  </div>
+</section>
+
+<!-- View 3: Watch Later Screen -->
+<section class="view-section" id="watchLaterSection">
+  <div style="padding: 20px 14px;">
+    <h2 style="margin-bottom: 12px;">⏰ Watch Later Videos</h2>
+    <div class="feed-container" id="watchLaterContainer" style="padding:0;">
+      <div class="loader-box"><p>Watch Later list is currently empty.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- View 4: YOU / Account & Comprehensive Settings -->
+<section class="view-section" id="youSection">
+  <div class="profile-section">
+    <div class="user-card">
+      <div class="user-avatar-lg" id="userAvatar">U</div>
+      <div class="user-details">
+        <h3 id="userName">User Account</h3>
+        <p id="userStatus">Not Logged In</p>
+      </div>
+    </div>
+
+    <div id="authBtnContainer">
+      <button class="google-login-btn" onclick="handleGoogleLogin()">
+        <svg class="google-icon" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/></svg>
+        Sign in with Gmail
+      </button>
+    </div>
+
+    <div class="action-list">
+      <div class="list-item" onclick="openMyUploads()">
+        <div class="list-item-left"><span>🎞️</span><span>My IndTube Uploads</span></div><span>❯</span>
+      </div>
+      <div class="list-item" onclick="openModal('createChannelModal')">
+        <div class="list-item-left">
+          <span>📺</span>
+          <span>Create Channel</span>
+        </div>
+        <span>❯</span>
+      </div>
+      <div class="list-item" onclick="switchTab('watchLater')">
+        <div class="list-item-left">
+          <span>⏰</span>
+          <span>Your Saved Videos</span>
+        </div>
+        <span>❯</span>
+      </div>
+    </div>
+
+    <h3 style="margin-bottom: 12px; font-size: 16px;">⚙️ App Settings</h3>
+    <div class="settings-panel">
+      <div class="setting-group">
+        <h4>General & Theme</h4>
+        <div class="setting-row">
+          <span>Dark Theme</span>
+          <label class="switch">
+            <input type="checkbox" data-setting="darkTheme" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div class="setting-row">
+          <span>Data Saver Mode</span>
+          <label class="switch">
+            <input type="checkbox" data-setting="dataSaver">
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="setting-group">
+        <h4>Notifications</h4>
+        <div class="setting-row">
+          <span>Push Notifications</span>
+          <label class="switch">
+            <input type="checkbox" data-setting="pushNotifications" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div class="setting-row">
+          <span>Subscriptions Digest</span>
+          <label class="switch">
+            <input type="checkbox" data-setting="digest" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="setting-group">
+        <h4>Channel & Privacy</h4>
+        <div class="setting-row">
+          <span>Keep my subscriptions private</span>
+          <label class="switch">
+            <input type="checkbox" data-setting="privateSubscriptions" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div class="setting-row" onclick="alert('Search and watch history cleared!')" style="cursor: pointer;">
+          <span style="color: #ff9933;">Clear Search & Watch History</span>
+          <span>🗑️</span>
+        </div>
+      </div>
+    </div>
+    <div id="myUploadsPanel" style="padding:14px;">
+      <h3 style="margin:8px 0 12px;">🎬 My Uploaded Videos</h3>
+      <div id="myUploadsList" class="feed-container" style="padding:0;"><p style="color:var(--text-secondary)">Your uploads will appear here.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- Bottom Sheet Popup for Upload Options -->
+<div class="bottom-sheet-overlay" id="uploadSheet">
+  <div class="bottom-sheet">
+    <div class="sheet-title">
+      <span>Create Content</span>
+      <button class="close-modal-btn" onclick="closeSheet()">✕</button>
+    </div>
+    
+    <div class="sheet-option" onclick="triggerUpload('Short Video')">
+      <div class="sheet-option-icon">⚡</div>
+      <div>
+        <div>Upload Short</div>
+        <div style="font-size: 11px; color: var(--text-secondary);">Share vertical video under 60 seconds</div>
+      </div>
+    </div>
+
+    <div class="sheet-option" onclick="triggerUpload('Long Video')">
+      <div class="sheet-option-icon">🎬</div>
+      <div>
+        <div>Upload Long Video</div>
+        <div style="font-size: 11px; color: var(--text-secondary);">Upload high quality full length videos</div>
+      </div>
+    </div>
+
+    <div class="sheet-option" onclick="triggerUpload('Live Stream')">
+      <div class="sheet-option-icon">🔴</div>
+      <div>
+        <div>Go Live Stream</div>
+        <div style="font-size: 11px; color: var(--text-secondary);">Broadcast live to your subscribers</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Create Channel -->
+<div class="modal-overlay" id="createChannelModal">
+  <div class="modal-card">
+    <button class="close-modal-btn" onclick="closeModal('createChannelModal')">✕</button>
+    <h2>📺 Create Your Channel</h2>
+    <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px;">Set up your IndTube channel name and handle.</p>
+    <input type="text" id="channelNameInput" placeholder="Channel Name (e.g. My Vlogs)">
+    <input type="text" id="channelHandleInput" placeholder="Handle (e.g. @myvlogs)">
+    <button class="btn-primary" onclick="handleCreateChannel()">Create Channel</button>
+  </div>
+</div>
+
+<input type="file" id="filePicker" style="display: none;" accept="video/*" onchange="handleFileSelected(event)">
+
+<!-- Shorts Overlay Viewer -->
+<div class="shorts-viewer" id="shortsViewer">
+  <div class="shorts-stage">
+    <div class="shorts-iframe-box" id="shortsIframeContainer"></div>
+    <div class="shorts-topbar"><button class="shorts-back-btn" onclick="closeShorts()" aria-label="Back">‹</button></div>
+    <div id="shortsGestureZone" aria-label="Swipe here to move to the next Short" title="Swipe up for next Short"></div>
+    <div class="shorts-actions-bar">
+      <button class="short-action-btn" id="shortLikeBtn" onclick="likeShort(this)">♡<span>Like</span></button>
+      <button class="short-action-btn" id="shortCommentBtn" onclick="openShortComments()">💬<span>Comment</span></button>
+      <button class="short-action-btn" id="shortRepostBtn" onclick="toggleShortRepost(this)">🔁<span>Repost</span></button>
+      <button class="short-action-btn" onclick="shareVideo()">➤<span>Share</span></button>
+      <button class="short-action-btn" id="shortSaveBtn" onclick="saveCurrentShort()">▱<span>Save</span></button>
+    </div>
+    <div class="short-more-wrap">
+      <button class="short-more-btn" type="button" id="shortMoreBtn" onclick="toggleShortMoreMenu(event)" aria-label="More options" aria-expanded="false">•••</button>
+      <div class="short-more-menu" id="shortMoreMenu" role="menu" aria-label="Short options">
+        <button type="button" role="menuitem" onclick="shortPreference('interested')"><span class="mi">👍</span><span>Interested</span></button>
+        <button type="button" role="menuitem" onclick="shortPreference('notInterested')"><span class="mi">👎</span><span>Not interested</span></button>
+        <button type="button" role="menuitem" onclick="shortPreference('dontRecommend')"><span class="mi">🚫</span><span>Don't recommend this channel</span></button>
+        <div class="short-more-divider"></div>
+        <button type="button" role="menuitem" onclick="reportCurrentShort()"><span class="mi">⚑</span><span>Report</span></button>
+        <button type="button" role="menuitem" onclick="copyCurrentShortLink()"><span class="mi">🔗</span><span>Copy link</span></button>
+        <button type="button" role="menuitem" onclick="saveCurrentShort(); closeShortMoreMenu()"><span class="mi">▣</span><span>Save / Remove from saved</span></button>
+      </div>
+    </div>
+    <div id="shortMoreToast" role="status" aria-live="polite"></div>
+    <div class="shorts-bottom-info">
+      <div class="shorts-creator-row">
+        <div class="shorts-avatar" id="shortsAvatar">I</div>
+        <span class="shorts-creator-name" id="shortsCreatorName">IndTube Creator</span>
+        <button class="shorts-follow-btn" id="shortsFollowBtn" onclick="toggleShortFollow(this)">Follow</button>
+      </div>
+      <div class="shorts-caption" id="shortsCaption">Loading Short...</div>
+      <div class="shorts-audio">♫ Original audio</div>
+    </div>
+  </div>
+  <div class="shorts-comment-footer">
+    <button class="shorts-comment-input" type="button" onclick="openShortComments()" style="text-align:left">Add a comment...</button>
+  </div>
+  <div class="short-comments-panel" id="shortCommentsPanel" aria-hidden="true">
+    <div class="short-comments-head"><strong>Comments</strong><button type="button" onclick="closeShortComments()" aria-label="Close comments">✕</button></div>
+    <div class="short-comments-list" id="shortCommentsList"></div>
+    <div class="short-comments-compose"><input id="shortsCommentInput" type="text" placeholder="Add comment..." maxlength="500" onkeydown="if(event.key==='Enter') submitShortComment()"><button type="button" onclick="submitShortComment()">Post</button></div>
+  </div>
+</div>
+
+<!-- Bottom Navigation Bar -->
+<!-- Floating player stays active while user searches/browses other videos -->
+<div class="mini-player" id="miniPlayer" hidden>
+  <div class="mini-player-handle" id="miniPlayerDragHandle">
+    <span>▶ अब चल रहा है</span>
+    <div class="mini-player-controls">
+      <button type="button" aria-label="Open full player" onclick="restoreMiniPlayer()">↗</button>
+      <button type="button" aria-label="Close mini player" onclick="stopMiniPlayer()">×</button>
+    </div>
+  </div>
+  <div class="mini-player-video" id="miniPlayerVideo"></div>
+</div>
+
+<nav class="bottom-nav" aria-label="Main navigation">
+  <button class="nav-item active" id="navHome" onclick="switchTab('home')" aria-label="Home">
+    <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/></svg></span>
+    <span>Home</span>
+  </button>
+  <button class="nav-item" id="navShorts" onclick="openShortsMode()" aria-label="Shorts">
+    <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="m7 3 10 18M17 3 7 21" opacity=".0"/><path d="M8 3h8a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z"/><path d="m10 9 5 3-5 3z"/></svg></span>
+    <span>Shorts</span>
+  </button>
+  <button class="nav-item create-btn" id="navUpload" onclick="openUploadSheet()" aria-label="Upload">
+    <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 4v16M4 12h16"/></svg></span>
+    <span>Upload</span>
+  </button>
+  <button class="nav-item" id="navWatchLater" onclick="switchTab('watchLater')" aria-label="Watch Later">
+    <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>
+    <span>Watch Later</span>
+  </button>
+  <button class="nav-item" id="navYou" onclick="switchTab('you')" aria-label="You">
+    <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="10" r="3"/><path d="M6.5 18a6 6 0 0 1 11 0"/></svg></span>
+    <span>You</span>
+  </button>
+</nav>
+
+<script>
+// Public browser-side YouTube Data API key. Restrict this key to your HTTPS site in Google Cloud Console.
+let API_KEY = (() => {
+  try { return localStorage.getItem('indtube_youtube_api_key') || 'AIzaSyBCJU4NJKsId4F_klYM5aWBO5ZVR9WF9nA'; }
+  catch (_) { return 'AIzaSyBCJU4NJKsId4F_klYM5aWBO5ZVR9WF9nA'; }
+})();
+const BASE_URL = "https://www.googleapis.com/youtube/v3";
+
+let currentVideoObj = null;
+let watchLaterList = safeLoad('indtube_watchlater', []);
+let isLiked = false;
+let videoBaseLikeCount = 0;
+function getLocalLikedVideoIds() {
+  try { return JSON.parse(localStorage.getItem('indtube_liked_video_ids') || '[]'); }
+  catch (_) { return []; }
+}
+function saveLocalLikedVideoIds(ids) {
+  try { localStorage.setItem('indtube_liked_video_ids', JSON.stringify([...new Set(ids)])); }
+  catch (_) {}
+}
+function updateDisplayedLikeCount() {
+  const count = Math.max(0, videoBaseLikeCount + (isLiked ? 1 : 0));
+  const el = document.getElementById('likeCount');
+  if (el) el.textContent = formatCompactCount(count);
+}
+
+let subscriptionState = "none";
+let selectedUploadType = "";
+let currentUser = safeLoad('indtube_user', null);
+let nextPageToken = "";
+let isLoadingVideos = false;
+let hasMoreVideos = true;
+let currentQuery = "";
+let currentCategory = "All";
+let currentFeedMode = "home";
+let loadedVideoIds = new Set();
+let shortsList = [];
+let shortsIndex = 0;
+let shortsLiked = false;
+let shortsNextPageToken = '';
+let shortsLoadingMore = false;
+let commentsByVideo = safeLoad('indtube_comments', {});
+let subscriptions = safeLoad('indtube_subscriptions', {});
+let userSettings = safeLoad('indtube_settings', {
+  darkTheme: true, dataSaver: false, pushNotifications: true,
+  digest: true, privateSubscriptions: true
+});
+let observer = null;
+let searchDebounceTimer = null;
+let suggestionAbortController = null;
+let feedRequestVersion = 0;
+const youtubeInflightRequests = new Map();
+// Rotate the home feed category on each fresh app open to avoid the same first video.
+const homeFeedCategories = ['0','10','20','17','24','28','22','25'];
+let homeFeedCategoryId = '0';
+try {
+  const openCount = Number(localStorage.getItem('indtube_home_open_count') || '0');
+  homeFeedCategoryId = homeFeedCategories[(openCount % homeFeedCategories.length)];
+  localStorage.setItem('indtube_home_open_count', String(openCount + 1));
+} catch (_) {}
+
+function safeLoad(key, fallback) {
+  try {
+    const value = JSON.parse(localStorage.getItem(key));
+    return value === null ? fallback : value;
+  } catch (_) { return fallback; }
+}
+function persist(key, value) {
+  try { localStorage.setItem(key, JSON.stringify(value)); }
+  catch (_) { alert("Device storage is full. Some changes could not be saved."); }
+}
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, ch => ({
+    '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
+  }[ch]));
+}
+function getVideoId(item) {
+  if (typeof item?.id === 'string') return item.id;
+  return item?.id?.videoId || '';
+}
+function getThumb(snippet) {
+  return snippet?.thumbnails?.high?.url || snippet?.thumbnails?.medium?.url ||
+         snippet?.thumbnails?.default?.url || '';
+}
+
+// Fetch real channel profile pictures in one batched request and reuse them.
+const channelAvatarCache = new Map();
+async function hydrateChannelAvatars(items) {
+  const ids = [...new Set((items || []).map(x => x?.snippet?.channelId).filter(Boolean))];
+  const missing = ids.filter(id => !channelAvatarCache.has(id));
+  if (missing.length) {
+    try {
+      const data = await youtubeRequest('channels', { part: 'snippet', id: missing.join(',') });
+      (data.items || []).forEach(ch => {
+        const t = ch.snippet?.thumbnails || {};
+        channelAvatarCache.set(ch.id, t.high?.url || t.medium?.url || t.default?.url || '');
+      });
+      missing.forEach(id => { if (!channelAvatarCache.has(id)) channelAvatarCache.set(id, ''); });
+    } catch (e) { console.warn('Channel avatars unavailable:', e); }
+  }
+  document.querySelectorAll('.channel-avatar[data-channel-id], #channelAvatarBox[data-channel-id]').forEach(el => {
+    const url = channelAvatarCache.get(el.dataset.channelId);
+    if (url) el.innerHTML = `<img src="${escapeHtml(url)}" alt="Channel profile" loading="lazy">`;
+  });
+}
+
+window.onload = () => {
+  updateUserUI();
+  applySettingsToUI();
+  fetchYouTubeVideos();
+  bindSettings();
+};
+
+function explainApiError(error) {
+  const code = String(error?.message || error || 'unknown').toLowerCase();
+  if (code.includes('153')) return 'YouTube Player Error 153: app ko HTTPS website par host karein. Browser referrer policy strict-origin-when-cross-origin rakhein; file:// ya no-referrer mode mein playback nahi chalega.';
+  if (code.includes('ratelimitexceeded') || code.includes('userratelimitexceeded')) return 'YouTube API पर बहुत तेज़ requests जा रही हैं। IndTube ने थोड़ी देर के लिए retry रोक दिया है; कुछ सेकंड बाद कोशिश करें।';
+  if (code.includes('quota') || code.includes('dailylimit')) return 'YouTube API की आज की quota सीमा पूरी हो गई है। Quota reset होने तक इंतज़ार करें या Google Cloud Console में quota देखें।';
+  if (code.includes('keyinvalid') || code.includes('key_invalid') || code.includes('invalid api key')) return 'API Key गलत या निष्क्रिय है। Google Cloud Console में YouTube Data API v3 और API Key जाँचें।';
+  if (code.includes('keyexpired')) return 'API Key की अवधि समाप्त है। Google Cloud Console में नई key बनाएँ।';
+  if (code.includes('referer') || code.includes('refererblocked') || code.includes('ipreferer')) return 'API Key की website/referrer restriction इस वेबसाइट से मेल नहीं खाती। अपनी साइट का domain API Key में allow करें।';
+  if (code.includes('accessnotconfigured') || code.includes('youtube data api')) return 'Google Cloud प्रोजेक्ट में YouTube Data API v3 enable नहीं है।';
+  if (code.includes('failed to fetch') || code.includes('network') || code.includes('load failed')) return 'Internet या network connection उपलब्ध नहीं है।';
+  if (code.includes('403')) return 'Google API ने request रोक दी। API Key restrictions, API enablement और quota जाँचें।';
+  if (code.includes('400')) return 'Search request में कोई parameter गलत है। Search शब्द बदलकर फिर कोशिश करें।';
+  return `API समस्या (${String(error?.message || error)}). Internet और Google Cloud API settings जाँचें।`;
+}
+
+async function youtubeRequest(endpoint, params = {}) {
+  if (!API_KEY) throw new Error('API_KEY_MISSING');
+  const url = new URL(`${BASE_URL}/${endpoint}`);
+  Object.entries({ ...params, key: API_KEY }).forEach(([k,v]) => {
+    if (v !== undefined && v !== null && v !== '') url.searchParams.set(k, v);
+  });
+  const cacheKey = `indtube_api_${endpoint}_${API_KEY.slice(-6)}_${JSON.stringify(params)}`;
+  const cacheTtl = endpoint === 'search' ? 15 * 60 * 1000 : 5 * 60 * 1000;
+  try {
+    const cached = JSON.parse(sessionStorage.getItem(cacheKey) || 'null');
+    if (cached && cached.savedAt && Date.now() - cached.savedAt < cacheTtl) return cached.data;
+  } catch (_) {}
+  // Identical simultaneous requests share one API call (prevents duplicate quota use).
+  if (youtubeInflightRequests.has(cacheKey)) return youtubeInflightRequests.get(cacheKey);
+  const request = (async () => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 18000);
+    let response;
+    try {
+      response = await fetch(url.toString(), { method: 'GET', cache: 'default', signal: controller.signal });
+    } catch (err) {
+      if (err?.name === 'AbortError') throw new Error('network timeout');
+      throw new Error(err?.message || 'network error');
+    } finally { clearTimeout(timeoutId); }
+    let data;
+    try { data = await response.json(); } catch (_) { throw new Error(`HTTP ${response.status}`); }
+    if (!response.ok || data.error) {
+      const reason = data?.error?.errors?.[0]?.reason || data?.error?.status || data?.error?.message || `HTTP ${response.status}`;
+      throw new Error(reason);
+    }
+    try { sessionStorage.setItem(cacheKey, JSON.stringify({ savedAt: Date.now(), data })); } catch (_) {}
+    return data;
+  })();
+  youtubeInflightRequests.set(cacheKey, request);
+  try { return await request; }
+  finally { if (youtubeInflightRequests.get(cacheKey) === request) youtubeInflightRequests.delete(cacheKey); }
+}
+
+function resetFeedState(query = '', mode = 'home') {
+  currentQuery = query;
+  currentFeedMode = mode;
+  nextPageToken = '';
+  hasMoreVideos = true;
+  loadedVideoIds = new Set();
+  if (observer) observer.disconnect();
+}
+
+async function fetchYouTubeVideos(query = '', isShorts = false) {
+  const requestVersion = ++feedRequestVersion;
+  isLoadingVideos = false; // allow a new search while an older request is still finishing
+  resetFeedState(query, isShorts ? 'shorts' : 'home');
+  const container = document.getElementById('feedContainer');
+  if (!container) return;
+  container.innerHTML = `<div class="loader-box"><div class="spinner"></div><p>${query ? 'Searching IndTube...' : 'Loading Videos...'}</p></div>`;
+  await loadMoreVideos(true, requestVersion);
+}
+
+async function loadMoreVideos(initial = false, requestVersion = feedRequestVersion) {
+  if (isLoadingVideos || !hasMoreVideos || currentFeedMode !== 'home') return;
+  isLoadingVideos = true;
+  const container = document.getElementById('feedContainer');
+  try {
+    const params = { part: 'snippet', maxResults: initial ? 12 : 20, regionCode: 'IN', pageToken: nextPageToken };
+    let data;
+    if (currentQuery) {
+      params.q = currentQuery;
+      params.type = 'video';
+      params.order = 'relevance';
+      data = await youtubeRequest('search', params);
+    } else {
+      // Prefer the low-quota mostPopular endpoint. If it is unavailable or returns
+      // no videos for this region/category, fall back to a normal YouTube search.
+      try {
+        data = await youtubeRequest('videos', {
+          part: 'snippet,statistics,contentDetails', chart: 'mostPopular',
+          regionCode: 'IN', maxResults: initial ? 12 : 20, pageToken: nextPageToken,
+          ...(homeFeedCategoryId !== '0' ? { categoryId: homeFeedCategoryId } : {})
+        });
+      } catch (homeError) {
+        const reason = String(homeError?.message || homeError).toLowerCase();
+        if (/keyinvalid|key_invalid|invalid api key|refererblocked|ipreferer|accessnotconfigured/.test(reason)) throw homeError;
+        console.warn('Home chart endpoint failed; using search fallback:', homeError);
+        data = await youtubeRequest('search', {
+          part: 'snippet', type: 'video', q: 'trending videos India', order: 'relevance',
+          regionCode: 'IN', maxResults: initial ? 12 : 20, pageToken: nextPageToken
+        });
+      }
+      if ((!data.items || !data.items.length) && initial) {
+        data = await youtubeRequest('search', {
+          part: 'snippet', type: 'video', q: 'popular videos India', order: 'relevance',
+          regionCode: 'IN', maxResults: 12
+        });
+      }
+    }
+    if (requestVersion !== feedRequestVersion) return;
+    const items = (data.items || []).filter(item => getVideoId(item) && item.snippet);
+    const fresh = items.filter(item => !loadedVideoIds.has(getVideoId(item)));
+    fresh.forEach(item => loadedVideoIds.add(getVideoId(item)));
+    if (initial) container.innerHTML = '';
+    if (fresh.length) renderFeedCards(fresh, 'feedContainer', true);
+    if (!fresh.length && initial) container.innerHTML = '<div class="loader-box"><p>No videos found. Try another search.</p></div>';
+    nextPageToken = data.nextPageToken || '';
+    hasMoreVideos = Boolean(nextPageToken);
+  } catch (error) {
+    if (requestVersion === feedRequestVersion) {
+      console.error('IndTube video feed error:', error);
+      const message = explainApiError(error);
+      const hasVisibleVideos = container.querySelector('.video-card');
+      const errorBox = `<div class="loader-box feed-retry-notice"><p><strong>${hasVisibleVideos ? 'Aur videos abhi load nahi ho paaye.' : 'Videos load nahi ho paaye.'}</strong></p><p style="max-width:520px;margin:8px auto;color:var(--text-secondary)">${escapeHtml(message)}</p><button class="action-pill" type="button" onclick="retryVideoFeed()">Dobara Koshish Karein</button></div>`;
+      // A failed next-page request must never erase videos already displayed.
+      if (hasVisibleVideos) {
+        container.querySelector('.feed-retry-notice')?.remove();
+        container.insertAdjacentHTML('beforeend', errorBox);
+      } else {
+        container.innerHTML = errorBox;
+      }
+    }
+  } finally {
+    if (requestVersion === feedRequestVersion) isLoadingVideos = false;
+  }
+}
+
+function retryVideoFeed() {
+  if (currentFeedMode === 'shorts') return fetchYouTubeVideos(currentQuery, true);
+  const container = document.getElementById('feedContainer');
+  if (container?.querySelector('.video-card')) {
+    container.querySelector('.feed-retry-notice')?.remove();
+    return loadMoreVideos(false, feedRequestVersion);
+  }
+  return fetchYouTubeVideos(currentQuery, false);
+}
+
+// Load the next page automatically as the user scrolls near the bottom.
+let feedScrollQueued = false;
+window.addEventListener('scroll', () => {
+  if (feedScrollQueued) return;
+  feedScrollQueued = true;
+  requestAnimationFrame(() => {
+    feedScrollQueued = false;
+    if (currentFeedMode !== 'home' || isLoadingVideos || !hasMoreVideos) return;
+    const nearBottom = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 900;
+    if (nearBottom) loadMoreVideos(false, feedRequestVersion);
+  });
+}, { passive: true });
+
+function renderFeedCards(items, targetContainerId, append = false) {
+  const container = document.getElementById(targetContainerId);
+  if (!container) return;
+  if (!append) container.innerHTML = '';
+  items.forEach(item => {
+    const videoId = getVideoId(item);
+    const snippet = item.snippet;
+    if (!videoId || !snippet) return;
+    const card = document.createElement('div');
+    card.className = 'video-card';
+    card.onclick = () => openWatchScreen(videoId, snippet);
+    const img = getThumb(snippet);
+    card.innerHTML = `
+      <div class="thumbnail-box"><img src="${escapeHtml(img)}" alt="${escapeHtml(snippet.title)}" loading="lazy"></div>
+      <div class="video-details">
+        <div class="channel-avatar" data-channel-id="${escapeHtml(snippet.channelId || '')}">${escapeHtml((snippet.channelTitle || 'U')[0])}</div>
+        <div class="meta-info">
+          <h3>${escapeHtml(snippet.title)}</h3>
+          <p>${escapeHtml(snippet.channelTitle || 'YouTube')} • ${snippet.publishedAt ? new Date(snippet.publishedAt).toLocaleDateString() : ''}</p>
+        </div>
+      </div>`;
+    container.appendChild(card);
+  });
+  hydrateChannelAvatars(items);
+}
+
+// Unified in-app navigation history. Each screen gets its own Back step.
+if (!window.__indtubeHistoryReady) {
+  window.__indtubeHistoryReady = true;
+  try { history.replaceState({ indtubeView: 'home' }, '', location.pathname + location.search + '#home'); } catch (_) {}
+}
+
+/* Open Video Player with Top Fixed Sticky Iframe */
+function openWatchScreen(videoId, snippet) {
+  // Keep a history entry so Android/browser Back returns home without stopping playback.
+  try { history.pushState({ indtubeView: 'watch', indtubeWatch: true, from: history.state?.indtubeView || (currentQuery ? 'search' : 'home'), query: currentQuery || '' }, '', '#watch'); } catch (_) {}
+  // A newly selected video replaces the previous mini-player.
+  const miniPlayer = document.getElementById('miniPlayer');
+  const miniHost = document.getElementById('miniPlayerVideo');
+  if (miniHost) miniHost.innerHTML = '';
+  if (miniPlayer) miniPlayer.hidden = true;
+  currentVideoObj = { id: videoId, snippet };
+  document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active'));
+  document.getElementById('topHeader').style.display = 'none';
+  document.getElementById('categoryBar').style.display = 'none';
+  document.getElementById('watchSection').classList.add('active');
+  window.scrollTo(0, 0);
+
+  /* Sticky Top Video Player */
+  const playerOrigin = (location.protocol === 'http:' || location.protocol === 'https:')
+    ? `&origin=${encodeURIComponent(location.origin)}` : '';
+  document.getElementById('mainPlayerContainer').innerHTML = `
+    <div class="mini-inline-controls"><span>▶ IndTube में चल रहा है</span><span><button type="button" onclick="restoreMiniPlayer()" aria-label="वापस खोलें">↗</button> <button type="button" onclick="stopMiniPlayer()" aria-label="बंद करें">×</button></span></div>
+    <iframe src="https://www.youtube.com/embed/${encodeURIComponent(videoId)}?autoplay=1&playsinline=1&controls=1&rel=0&enablejsapi=1${playerOrigin}&widget_referrer=${encodeURIComponent(location.origin || '')}"
+      referrerpolicy="origin"
+      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+      allowfullscreen title="${escapeHtml(snippet.title)}"></iframe>`;
+  // The drag handle is created dynamically with this player, so bind after insertion.
+  initMiniPlayerDrag();
+
+  document.getElementById('watchVideoTitle').innerText = (snippet.title || 'Video') + ' ▾';
+  document.getElementById('watchVideoTitle').setAttribute('aria-expanded','false');
+  document.getElementById('videoDescriptionPanel').hidden = true;
+  document.getElementById('videoDescriptionText').textContent = snippet.description || 'इस वीडियो के लिए description उपलब्ध नहीं है।';
+  document.getElementById('watchVideoSubtext').innerText = `${snippet.channelTitle || 'YouTube'} • ${snippet.publishedAt ? new Date(snippet.publishedAt).toLocaleDateString() : ''}`;
+  document.getElementById('watchVideoSubtext').dataset.videoId = videoId;
+  loadRealVideoStats(videoId, snippet.channelId);
+  document.getElementById('channelNameTag').innerText = snippet.channelTitle || 'YouTube Channel';
+  const playerAvatar = document.getElementById('channelAvatarBox');
+  playerAvatar.textContent = (snippet.channelTitle || 'I')[0];
+  playerAvatar.dataset.channelId = snippet.channelId || '';
+  if (snippet.channelId) hydrateChannelAvatars([{snippet}]);
+  
+  videoBaseLikeCount = 0;
+  isLiked = getLocalLikedVideoIds().includes(videoId);
+  subscriptionState = subscriptions[snippet.channelId] || 'none';
+  updateSubscriptionUI();
+  document.getElementById('likeBtn').classList.toggle('liked', isLiked);
+  document.getElementById('dislikeBtn').classList.remove('active');
+  updateDisplayedLikeCount();
+  document.getElementById('saveBtn').innerText = watchLaterList.some(v => v.id === videoId) ? '✔ Saved' : '➕ Watch Later';
+  
+  renderComments();
+  loadHorizontalShortsShelf();
+  fetchRelatedVideos(snippet.title);
+}
+
+
+// Format large counts in YouTube style: 1K, 10K, 1M, etc.
+function formatCompactCount(value) {
+  const n = Number(value || 0);
+  if (!Number.isFinite(n)) return '0';
+  if (n < 1000) return Math.floor(n).toLocaleString('en-IN');
+  const units = [
+    { value: 1e9, suffix: 'B' },
+    { value: 1e6, suffix: 'M' },
+    { value: 1e3, suffix: 'K' }
+  ];
+  const unit = units.find(x => n >= x.value);
+  const scaled = n / unit.value;
+  const digits = scaled >= 100 ? 0 : scaled >= 10 ? 0 : 1;
+  return `${Number(scaled.toFixed(digits)).toString()}${unit.suffix}`;
+}
+
+// Public YouTube statistics/comments are fetched from YouTube Data API.
+// Likes/subscriptions/comments created by this demo remain local unless OAuth + backend is configured.
+async function loadRealVideoStats(videoId, channelId) {
+  const sub = document.getElementById('channelSubTag');
+  try {
+    const data = await youtubeRequest('videos', {part:'statistics', id:videoId});
+    const st = data.items?.[0]?.statistics || {};
+    const views = Number(st.viewCount || 0);
+    const likes = Number(st.likeCount || 0);
+    const comments = Number(st.commentCount || 0);
+    document.getElementById('watchVideoSubtext').innerText =
+      `${currentVideoObj?.snippet?.channelTitle || 'YouTube'} • ${views.toLocaleString('en-IN')} views • ${currentVideoObj?.snippet?.publishedAt ? new Date(currentVideoObj.snippet.publishedAt).toLocaleDateString() : ''}`;
+    if (currentVideoObj?.id === videoId) {
+      videoBaseLikeCount = likes;
+      updateDisplayedLikeCount();
+    }
+    document.getElementById('commentCountTag').textContent = comments.toLocaleString('en-IN');
+    document.getElementById('commentTotal').textContent = comments.toLocaleString('en-IN');
+    if (channelId) {
+      const ch = await youtubeRequest('channels', {part:'statistics', id:channelId});
+      const count = ch.items?.[0]?.statistics?.subscriberCount;
+      if (count != null && sub) sub.textContent = `${formatCompactCount(count)} subscribers`;
+    }
+  } catch (e) {
+    console.warn('Public video statistics unavailable:', e);
+  }
+  try {
+    const data = await youtubeRequest('commentThreads', {
+      part:'snippet', videoId, maxResults:20, order:'relevance', textFormat:'plainText'
+    });
+    const rows = (data.items || []).map(x => ({
+      author: x.snippet?.topLevelComment?.snippet?.authorDisplayName || 'YouTube user',
+      text: x.snippet?.topLevelComment?.snippet?.textDisplay || ''
+    }));
+    if (currentVideoObj?.id === videoId) renderRealComments(rows);
+  } catch (e) {
+    // Comments may be disabled, moderated, or unavailable for this video/API key.
+    console.warn('Public comments unavailable:', e);
+  }
+}
+function renderRealComments(rows) {
+  const list = document.getElementById('commentsList');
+  if (!list) return;
+  list.innerHTML = '';
+  rows.forEach(c => {
+    const el = document.createElement('div'); el.className = 'comment-item';
+    const avatar = document.createElement('div'); avatar.className='comment-user-avatar'; avatar.textContent='👤';
+    const body = document.createElement('div'); body.className='comment-body';
+    const name = document.createElement('h5'); name.textContent=c.author;
+    const msg = document.createElement('p'); msg.textContent=c.text;
+    body.append(name,msg); el.append(avatar,body); list.appendChild(el);
+  });
+}
+
+/* Render YouTube-style horizontal Shorts Carousel under video player */
+async function loadHorizontalShortsShelf() {
+  const container = document.getElementById('shortsCarouselContainer');
+  if (!container) return;
+  container.innerHTML = '<div style="color:#aaa; font-size:12px; padding:10px;">Loading Shorts...</div>';
+  try {
+    const data = await youtubeRequest('search', {
+      part: 'snippet', maxResults: 8, q: 'shorts', type: 'video', videoDuration: 'short', regionCode: 'IN'
+    });
+    container.innerHTML = '';
+    (data.items || []).forEach(item => {
+      const id = getVideoId(item);
+      const snippet = item.snippet;
+      if (!id || !snippet) return;
+      const card = document.createElement('div');
+      card.className = 'short-shelf-card';
+      card.onclick = () => {
+        shortsList = data.items;
+        shortsNextPageToken = data.nextPageToken || '';
+        shortsIndex = data.items.findIndex(x => getVideoId(x) === id);
+        openShortsMode();
+      };
+      card.innerHTML = `
+        <img src="${escapeHtml(getThumb(snippet))}" alt="${escapeHtml(snippet.title)}">
+        <div class="short-shelf-info">
+          <h4>${escapeHtml(snippet.title)}</h4>
+          <span>${escapeHtml(snippet.channelTitle || 'Shorts')}</span>
+        </div>`;
+      container.appendChild(card);
+    });
+  } catch (e) {
+    document.getElementById('shortsShelfSection').style.display = 'none';
+  }
+}
+
+async function fetchRelatedVideos(query) {
+  const container = document.getElementById('relatedFeedContainer');
+  if (!container) return;
+  // Keep already rendered recommendations visible while a refresh is running.
+  if (!container.querySelector('.video-card')) {
+    container.innerHTML = '<p style="color:#aaa;padding:12px">Related videos लोड हो रहे हैं...</p>';
+  }
+  try {
+    const cleanQuery = String(query || '').trim().slice(0, 90);
+    if (!cleanQuery) throw new Error('Search query unavailable');
+    const data = await youtubeRequest('search', {
+      part: 'snippet', maxResults: 12, q: cleanQuery, type: 'video', regionCode: 'IN'
+    });
+    const related = (data.items || []).filter(v => getVideoId(v) !== currentVideoObj?.id);
+    if (related.length) {
+      renderFeedCards(related, 'relatedFeedContainer');
+    } else if (!container.querySelector('.video-card')) {
+      container.innerHTML = '<p style="color:#aaa;padding:12px">इस वीडियो से मिलते-जुलते वीडियो अभी नहीं मिले।</p>';
+    }
+  } catch (e) {
+    // Never clear existing recommendations on quota/network errors.
+    if (!container.querySelector('.video-card')) {
+      container.innerHTML = `<div style="color:#aaa;padding:12px">
+        <p>Related videos अभी लोड नहीं हो पाए। ${escapeHtml(getFriendlyApiError(e))}</p>
+        <button class="action-pill" type="button" onclick="fetchRelatedVideos(currentVideoObj?.snippet?.title || '')">फिर कोशिश करें</button>
+      </div>`;
+    }
+  }
+}
+
+function handleSubscribeClick() {
+  const dropdown = document.getElementById('subDropdown');
+  if (subscriptionState === 'none') setSubscriptionState('all');
+  else dropdown.classList.toggle('active');
+}
+function setSubscriptionState(state) {
+  document.getElementById('subDropdown').classList.remove('active');
+  subscriptionState = state === 'unsubscribe' ? 'none' : state;
+  const channelId = currentVideoObj?.snippet?.channelId;
+  if (channelId) {
+    if (subscriptionState === 'none') delete subscriptions[channelId];
+    else subscriptions[channelId] = subscriptionState;
+    persist('indtube_subscriptions', subscriptions);
+  }
+  updateSubscriptionUI();
+}
+function updateSubscriptionUI() {
+  const btn = document.getElementById('subBtn');
+  if (!btn) return;
+  const icon = document.getElementById('subBtnIcon'), text = document.getElementById('subBtnText');
+  btn.className = subscriptionState === 'none' ? 'subscribe-btn' : 'subscribe-btn subscribed';
+  icon.innerText = subscriptionState === 'all' ? '🔔' : subscriptionState === 'personalized' ? '🔕' : '';
+  text.innerText = subscriptionState === 'all' ? 'Subscribed' :
+    subscriptionState === 'personalized' ? 'Personalized' : 'Subscribe';
+}
+
+function openUploadSheet() { document.getElementById('uploadSheet').classList.add('active'); }
+function closeSheet() { document.getElementById('uploadSheet').classList.remove('active'); }
+function triggerUpload(type) {
+  selectedUploadType = type; closeSheet();
+  if (type === 'Live Stream') {
+    alert('Live streaming ke liye YouTube Live API, OAuth permission aur server-side setup zaroori hai.');
+    return;
+  }
+  document.getElementById('filePicker').click();
+}
+function openIndTubeDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open('IndTubeLocalMedia', 1);
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains('videos')) db.createObjectStore('videos', { keyPath: 'id' });
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+async function saveLocalVideo(record) {
+  const db = await openIndTubeDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('videos', 'readwrite');
+    tx.objectStore('videos').put(record);
+    tx.oncomplete = () => { db.close(); resolve(); };
+    tx.onerror = () => { db.close(); reject(tx.error); };
+  });
+}
+async function getLocalVideos() {
+  const db = await openIndTubeDB();
+  return new Promise((resolve, reject) => {
+    const req = db.transaction('videos', 'readonly').objectStore('videos').getAll();
+    req.onsuccess = () => { db.close(); resolve((req.result || []).sort((a,b) => b.createdAt-a.createdAt)); };
+    req.onerror = () => { db.close(); reject(req.error); };
+  });
+}
+async function deleteLocalVideo(id) {
+  if (!confirm('Is video ko IndTube ke is device se delete karna hai?')) return;
+  const db = await openIndTubeDB();
+  await new Promise((resolve, reject) => {
+    const tx = db.transaction('videos', 'readwrite'); tx.objectStore('videos').delete(id);
+    tx.oncomplete = resolve; tx.onerror = () => reject(tx.error);
+  });
+  db.close(); renderMyUploads();
+}
+async function handleFileSelected(e) {
+  const file = e.target.files?.[0];
+  if (!file) return;
+  try {
+    if (!file.type.startsWith('video/')) throw new Error('Please select a video file.');
+    if (file.size > 100 * 1024 * 1024) throw new Error('Abhi local upload ki limit 100 MB hai.');
+    const title = prompt('Video ka title likhein:', file.name.replace(/\.[^.]+$/, ''));
+    if (title === null || !title.trim()) return;
+    const description = prompt('Video description (optional):', '') || '';
+    const record = { id: 'local_' + Date.now() + '_' + Math.random().toString(36).slice(2,8), title: title.trim(), description, type: selectedUploadType || 'Long Video', file, mimeType: file.type, size: file.size, createdAt: Date.now() };
+    await saveLocalVideo(record);
+    alert('Video is device par IndTube mein save ho gaya. My IndTube Uploads mein dekh sakte hain.');
+    await renderMyUploads();
+  } catch (err) { alert('Upload save nahi hua: ' + (err.message || 'Storage error')); }
+  finally { e.target.value = ''; }
+}
+async function renderMyUploads() {
+  const box = document.getElementById('myUploadsList'); if (!box) return;
+  try {
+    const videos = await getLocalVideos();
+    if (!videos.length) { box.innerHTML = '<p style="color:var(--text-secondary)">Abhi koi upload nahi hai.</p>'; return; }
+    box.innerHTML = '';
+    videos.forEach(v => {
+      const card = document.createElement('div'); card.className = 'video-card';
+      const date = new Date(v.createdAt).toLocaleDateString();
+      card.innerHTML = `<div class="video-details"><div class="channel-avatar">▶</div><div class="meta-info"><h3></h3><p></p></div><button class="action-pill" type="button">🗑️ Delete</button></div>`;
+      card.querySelector('h3').textContent = v.title;
+      card.querySelector('p').textContent = `${v.type} • ${(v.size/1024/1024).toFixed(1)} MB • ${date}`;
+      card.querySelector('button').onclick = (ev) => { ev.stopPropagation(); deleteLocalVideo(v.id); };
+      card.querySelector('.meta-info').onclick = () => playLocalVideo(v);
+      box.appendChild(card);
+    });
+  } catch (err) { box.innerHTML = '<p>Local video storage is not available in this browser.</p>'; }
+}
+function openMyUploads() { renderMyUploads(); document.getElementById('myUploadsPanel')?.scrollIntoView({behavior:'smooth'}); }
+function playLocalVideo(video) {
+  try { history.pushState({ indtubeView: 'watch', indtubeWatch: true, from: history.state?.indtubeView || 'settings' }, '', '#watch'); } catch (_) {}
+  currentVideoObj = { id: video.id, snippet: { title: video.title, channelTitle: 'IndTube Creator', description: video.description || '' } };
+  document.getElementById('watchVideoTitle').textContent = video.title + ' ▾';
+  document.getElementById('watchVideoTitle').setAttribute('aria-expanded','false');
+  document.getElementById('videoDescriptionPanel').hidden = true;
+  document.getElementById('videoDescriptionText').textContent = video.description || 'इस वीडियो के लिए description नहीं जोड़ा गया है।';
+  document.getElementById('watchVideoSubtext').textContent = 'IndTube • Your uploaded video';
+  const url = URL.createObjectURL(video.file);
+  document.getElementById('mainPlayerContainer').innerHTML = `<div class="mini-inline-controls"><span>▶ IndTube में चल रहा है</span><span><button type="button" onclick="restoreMiniPlayer()" aria-label="वापस खोलें">↗</button> <button type="button" onclick="stopMiniPlayer()" aria-label="बंद करें">×</button></span></div><video controls autoplay playsinline style="width:100%;height:100%;aspect-ratio:16/9;background:#000" src="${url}"></video>`;
+  initMiniPlayerDrag();
+  document.querySelectorAll('.view-section').forEach(section => section.classList.remove('active'));
+  document.getElementById('watchSection').classList.add('active');
+  document.getElementById('topHeader').style.display = 'none';
+  document.getElementById('categoryBar').style.display = 'none';
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function positionMiniPlayerDefault() {
+  const mini = document.getElementById('miniPlayer');
+  if (!mini) return;
+  mini.style.left = '50%';
+  mini.style.top = '';
+  mini.style.right = 'auto';
+  mini.style.bottom = 'calc(82px + env(safe-area-inset-bottom))';
+  mini.style.transform = 'translateX(-50%)';
+  if (window.innerWidth > 600) mini.style.bottom = '24px';
+}
+
+function restoreMiniPlayer() {
+  const watch = document.getElementById('watchSection');
+  if (!watch) return;
+  // Add a fresh history step so the next Back returns to the previous screen
+  // and mini mode again, rather than skipping straight to Home.
+  try {
+    const previous = history.state || {};
+    history.pushState({ indtubeView: 'watch', indtubeWatch: true,
+      from: previous.indtubeView || (currentQuery ? 'search' : 'home'), query: currentQuery || '' }, '', '#watch');
+  } catch (_) {}
+  watch.classList.remove('mini-mode');
+  watch.style.left = ''; watch.style.top = ''; watch.style.right = ''; watch.style.bottom = ''; watch.style.transform = '';
+  watch.style.position = ''; watch.style.width = ''; watch.style.zIndex = ''; watch.style.maxWidth = '';
+  document.querySelectorAll('.view-section').forEach(section => section.classList.remove('active'));
+  watch.classList.add('active');
+  watch.style.display = '';
+  document.getElementById('mainPlayerContainer')?.scrollIntoView({block:'start'});
+  document.getElementById('topHeader').style.display = 'none';
+  document.getElementById('categoryBar').style.display = 'none';
+  setActiveNav('');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function stopMiniPlayer() {
+  const watch = document.getElementById('watchSection');
+  const main = document.getElementById('mainPlayerContainer');
+  const floating = document.getElementById('miniPlayer');
+  const floatingHost = document.getElementById('miniPlayerVideo');
+  if (main) main.innerHTML = ''; // explicit close stops playback
+  if (floatingHost) floatingHost.replaceChildren();
+  if (floating) floating.hidden = true;
+  watch?.classList.remove('mini-mode','active');
+  currentVideoObj = null;
+}
+
+function initMiniPlayerDrag() {
+  const watch = document.getElementById('watchSection');
+  const handle = watch?.querySelector('.mini-inline-controls');
+  if (!watch || !handle || handle.dataset.dragReady === 'v2') return;
+  handle.dataset.dragReady = 'v2';
+  let dragging = false, startX = 0, startY = 0, baseLeft = 0, baseTop = 0;
+  const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+  const point = e => e.touches ? e.touches[0] : e;
+  const begin = e => {
+    if (!watch.classList.contains('mini-mode') || e.target.closest('button')) return;
+    const p = point(e), r = watch.getBoundingClientRect();
+    dragging = true; startX = p.clientX; startY = p.clientY; baseLeft = r.left; baseTop = r.top;
+    watch.style.left = `${r.left}px`; watch.style.top = `${r.top}px`;
+    watch.style.right = 'auto'; watch.style.bottom = 'auto'; watch.style.transform = 'none';
+    e.preventDefault?.();
+  };
+  const move = e => {
+    if (!dragging) return;
+    const p = point(e);
+    const maxLeft = Math.max(0, window.innerWidth - watch.offsetWidth);
+    const maxTop = Math.max(0, window.innerHeight - watch.offsetHeight);
+    watch.style.left = `${clamp(baseLeft + p.clientX - startX, 0, maxLeft)}px`;
+    watch.style.top = `${clamp(baseTop + p.clientY - startY, 0, maxTop)}px`;
+    e.preventDefault?.();
+  };
+  const end = () => { dragging = false; };
+  handle.addEventListener('pointerdown', begin, {passive:false});
+  window.addEventListener('pointermove', move, {passive:false});
+  window.addEventListener('pointerup', end, {passive:true});
+  window.addEventListener('pointercancel', end, {passive:true});
+  // Fallback for older Android WebViews without reliable Pointer Events.
+  if (!('PointerEvent' in window)) {
+    handle.addEventListener('touchstart', begin, {passive:false});
+    window.addEventListener('touchmove', move, {passive:false});
+    window.addEventListener('touchend', end, {passive:true});
+    window.addEventListener('touchcancel', end, {passive:true});
+  }
+  window.addEventListener('resize', () => {
+    if (!watch.classList.contains('mini-mode') || !watch.style.left) return;
+    const r = watch.getBoundingClientRect();
+    watch.style.left = `${clamp(r.left,0,Math.max(0,innerWidth-watch.offsetWidth))}px`;
+    watch.style.top = `${clamp(r.top,0,Math.max(0,innerHeight-watch.offsetHeight))}px`;
+  });
+}
+
+document.addEventListener('DOMContentLoaded', initMiniPlayerDrag);
+
+// Pull down from the top of the feed to refresh IndTube without a full page reload.
+(function enablePullToRefresh(){
+  let startY = 0, tracking = false, refreshing = false;
+  document.addEventListener('touchstart', e => {
+    if (window.scrollY > 2 || !e.touches?.length || e.target.closest('.mini-inline-controls')) return;
+    tracking = true; startY = e.touches[0].clientY;
+  }, {passive:true});
+  document.addEventListener('touchmove', e => {
+    if (!tracking || !e.touches?.length) return;
+    if (e.touches[0].clientY - startY > 115 && !refreshing) {
+      tracking = false; refreshing = true;
+      const home = document.getElementById('homeFeedSection');
+      if (home?.classList.contains('active')) {
+        const feed = document.getElementById('feedContainer');
+        if (feed) feed.scrollIntoView({block:'start', behavior:'instant'});
+        fetchYouTubeVideos(currentQuery || '', false).finally(() => { refreshing = false; });
+      } else refreshing = false;
+    }
+  }, {passive:true});
+  document.addEventListener('touchend', () => { tracking = false; }, {passive:true});
+})();
+
+// Keep a stable Home entry so Android/browser Back from Search always returns Home.
+(function ensureHomeHistoryEntry(){
+  try {
+    if (!history.state || !history.state.indtubeView) history.replaceState({ indtubeView:'home', indtubeHome:true }, '', location.pathname + location.search + '#home');
+  } catch (_) {}
+})();
+
+// Android device Back / browser Back: leave the watch page, move the same iframe
+// into the mini-player, and show the home feed. Moving the iframe preserves playback.
+window.addEventListener('popstate', (event) => {
+  const watch = document.getElementById('watchSection');
+  const shorts = document.getElementById('shortsViewer');
+  const target = (event.state?.indtubeView === 'search' || event.state?.indtubeView === 'shorts' || event.state?.indtubeView === 'settings' || event.state?.indtubeView === 'watchLater') ? event.state.indtubeView : 'home';
+
+  // Back from a full video: move the SAME player element into mini mode and
+  // restore the screen that was underneath it (search, Shorts, settings, etc.).
+  if (watch?.classList.contains('active')) {
+    // Keep the SAME iframe/video in mainPlayerContainer. Reparenting an iframe
+    // into another host can blank/reload it in Android WebView and reset playback.
+    const player = document.querySelector('#mainPlayerContainer iframe, #mainPlayerContainer video');
+    watch.classList.remove('active');
+    if (player) watch.classList.add('mini-mode');
+  }
+
+  // Restore requested destination without refreshing the feed or destroying search results.
+  document.querySelectorAll('.view-section').forEach(section => section.classList.remove('active'));
+  shorts?.classList.remove('active');
+  const header = document.getElementById('topHeader');
+  const category = document.getElementById('categoryBar');
+  if (target === 'shorts') {
+    shorts?.classList.add('active');
+    if (header) header.style.display = 'none';
+    if (category) category.style.display = 'none';
+    setActiveNav('navShorts');
+    if (!document.querySelector('#shortsIframeContainer iframe')) showCurrentShort();
+  } else if (target === 'settings' || target === 'watchLater') {
+    const id = target === 'settings' ? 'youSection' : 'watchLaterSection';
+    document.getElementById(id)?.classList.add('active');
+    if (header) header.style.display = 'flex';
+    if (category) category.style.display = 'flex';
+    setActiveNav(target === 'settings' ? 'navYou' : 'navWatchLater');
+    if (target === 'watchLater') renderWatchLaterScreen();
+  } else {
+    document.getElementById('homeFeedSection')?.classList.add('active');
+    if (header) header.style.display = 'flex';
+    if (target === 'search' && event.state?.query) {
+      currentQuery = event.state.query;
+      if (category) category.style.display = 'none';
+      document.body.classList.remove('search-page-open');
+      const input = document.getElementById('searchInput');
+      if (input) input.value = currentQuery;
+      const searchHead = document.getElementById('searchResultsHeader');
+      if (searchHead) { searchHead.hidden = false; searchHead.querySelector('div').textContent = `Results for “${currentQuery}”`; }
+      loadRelatedSearches(currentQuery);
+    } else if (target === 'home') {
+      // Clear every trace of the previous search before rendering the Home feed.
+      currentQuery = '';
+      currentFeedMode = 'home';
+      if (category) category.style.display = 'flex';
+      document.body.classList.remove('search-page-open');
+      const top = document.getElementById('topHeader');
+      if (top) top.classList.remove('search-expanded');
+      const suggestions = document.getElementById('searchSuggestions');
+      if (suggestions) { suggestions.classList.remove('show'); suggestions.innerHTML = ''; }
+      const searchHead = document.getElementById('searchResultsHeader');
+      if (searchHead) searchHead.hidden = true;
+      const related = document.getElementById('relatedSearches');
+      if (related) related.innerHTML = '';
+      const input = document.getElementById('searchInput');
+      if (input) { input.value = ''; input.blur(); }
+      resetFeedState('', 'home');
+      if (typeof fetchYouTubeVideos === 'function') fetchYouTubeVideos('', false);
+    }
+    setActiveNav('navHome');
+  }
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+});
+function switchTab(tab) {
+  if (tab !== 'home' || (!currentQuery && currentFeedMode === 'home')) {
+    const viewName = tab === 'you' ? 'settings' : tab === 'watchLater' ? 'watchLater' : 'home';
+    try { history.pushState({ indtubeView: viewName }, '', '#' + viewName); } catch (_) {}
+  }
+  const watch = document.getElementById('watchSection');
+  if (watch.classList.contains('active') && document.querySelector('#mainPlayerContainer iframe, #mainPlayerContainer video')) {
+    // Do not move or recreate the iframe: preserving its DOM node preserves playback position.
+    watch.classList.remove('active');
+    watch.classList.add('mini-mode');
+  } else if (watch.classList.contains('active')) {
+    watch.classList.remove('active');
+  }
+  document.querySelectorAll('.view-section').forEach(section => section.classList.remove('active'));
+  document.getElementById('topHeader').style.display = 'flex';
+  document.getElementById('categoryBar').style.display = 'flex';
+  document.getElementById('shortsIframeContainer').innerHTML = '';
+  document.getElementById('shortsViewer').classList.remove('active');
+  if (tab === 'home') {
+    currentQuery = '';
+    currentFeedMode = 'home';
+    const searchHead = document.getElementById('searchResultsHeader'); if (searchHead) searchHead.hidden = true;
+    const input = document.getElementById('searchInput'); if (input) { input.value = ''; input.blur(); }
+    document.getElementById('topHeader')?.classList.remove('search-expanded');
+    document.getElementById('searchSuggestions')?.classList.remove('show');
+    const related = document.getElementById('relatedSearches'); if (related) related.innerHTML = '';
+    document.body.classList.remove('search-page-open');
+    setActiveNav('navHome'); document.getElementById('homeFeedSection').classList.add('active');
+    fetchYouTubeVideos('', false);
+  } else if (tab === 'watchLater') {
+    setActiveNav('navWatchLater'); document.getElementById('watchLaterSection').classList.add('active'); renderWatchLaterScreen();
+  } else if (tab === 'you') {
+    setActiveNav('navYou'); document.getElementById('youSection').classList.add('active'); renderMyUploads();
+  }
+  window.scrollTo(0, 0);
+}
+
+function renderWatchLaterScreen() {
+  const container = document.getElementById('watchLaterContainer');
+  if (!watchLaterList.length) container.innerHTML = '<div class="loader-box"><p>Watch Later list is currently empty.</p></div>';
+  else renderFeedCards(watchLaterList, 'watchLaterContainer');
+}
+
+function setActiveNav(id) {
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById(id)?.classList.add('active');
+}
+
+function toggleLike() {
+  if (!currentVideoObj) return;
+  isLiked = !isLiked;
+  const likedIds = getLocalLikedVideoIds().filter(id => id !== currentVideoObj.id);
+  if (isLiked) likedIds.push(currentVideoObj.id);
+  saveLocalLikedVideoIds(likedIds);
+
+  const likeBtn = document.getElementById('likeBtn');
+  const dislikeBtn = document.getElementById('dislikeBtn');
+  likeBtn.classList.toggle('liked', isLiked);
+  if (isLiked) dislikeBtn.classList.remove('active');
+  updateDisplayedLikeCount();
+}
+
+function toggleDislike() {
+  const btn = document.getElementById('dislikeBtn');
+  const isDisliked = !btn.classList.contains('active');
+  btn.classList.toggle('active', isDisliked);
+  if (isDisliked && isLiked) {
+    isLiked = false;
+    saveLocalLikedVideoIds(getLocalLikedVideoIds().filter(id => id !== currentVideoObj?.id));
+    document.getElementById('likeBtn').classList.remove('liked');
+    updateDisplayedLikeCount();
+  }
+}
+
+async function shareVideo() {
+  const videoId = currentVideoObj?.id;
+  const url = videoId ? `https://www.youtube.com/watch?v=${videoId}` : location.href;
+  if (navigator.share) await navigator.share({ title: 'IndTube', url });
+  else prompt('Copy this link:', url);
+}
+
+function toggleSaveWatchLater() {
+  if (!currentVideoObj) return;
+  const index = watchLaterList.findIndex(v => v.id === currentVideoObj.id);
+  if (index < 0) {
+    watchLaterList.push(currentVideoObj);
+    document.getElementById('saveBtn').innerText = '✔ Saved';
+  } else {
+    watchLaterList.splice(index, 1);
+    document.getElementById('saveBtn').innerText = '➕ Watch Later';
+  }
+  persist('indtube_watchlater', watchLaterList);
+}
+
+function renderComments() {
+  const list = document.getElementById('commentsList');
+  const comments = commentsByVideo[currentVideoObj?.id] || [];
+  list.innerHTML = '';
+  document.getElementById('commentTotal').innerText = comments.length;
+  document.getElementById('commentCountTag').innerText = comments.length;
+  comments.forEach(c => {
+    const el = document.createElement('div'); el.className = 'comment-item';
+    el.innerHTML = `<div class="comment-user-avatar">👤</div><div class="comment-body"><h5>${escapeHtml(currentUser?.name || 'You')} • ${escapeHtml(c.date)}</h5><p>${escapeHtml(c.text)}</p></div>`;
+    list.appendChild(el);
+  });
+}
+
+function postComment() {
+  const input = document.getElementById('newCommentInput');
+  const text = input.value.trim();
+  if (!text || !currentVideoObj) return;
+  const id = currentVideoObj.id;
+  commentsByVideo[id] ||= [];
+  commentsByVideo[id].push({ text, date: 'Just now' });
+  persist('indtube_comments', commentsByVideo);
+  input.value = ''; renderComments();
+}
+
+document.addEventListener('DOMContentLoaded', () => setCommentsExpanded(false));
+function setCommentsExpanded(expanded) {
+  const content = document.getElementById('commentsContent');
+  const toggle = document.getElementById('commentsToggle');
+  const indicator = document.getElementById('commentsToggleIndicator');
+  if (!content || !toggle) return;
+  content.hidden = !expanded;
+  toggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+  if (indicator) indicator.textContent = expanded ? '－' : '＋';
+}
+function toggleCommentsSection() {
+  const content = document.getElementById('commentsContent');
+  setCommentsExpanded(!!content && content.hidden);
+}
+function scrollComments() {
+  setCommentsExpanded(true);
+  const section = document.getElementById('commentsSection');
+  if (section) section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function filterCategory(btn, category) {
+  document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+  btn.classList.add('active');
+  currentCategory = category;
+  if (category === 'Shorts') { openShortsMode(); return; }
+  switchTab('home');
+  const categoryQueries = {
+    'All': '',
+    'Music': 'Hindi music video songs',
+    'Gaming': 'gaming gameplay India',
+    'Tech': 'technology gadgets smartphone review Hindi',
+    'Motu Patlu': 'Motu Patlu cartoon episodes',
+    'News': 'India latest news'
+  };
+  fetchYouTubeVideos(categoryQueries[category] ?? category);
+}
+
+let suggestionRequestToken = 0;
+let voiceRecognition = null;
+function getSearchHistory() {
+  try { return JSON.parse(localStorage.getItem('indtube_search_history') || '[]').filter(Boolean).slice(0,12); }
+  catch (_) { return []; }
+}
+function saveSearchHistory(q) {
+  try {
+    const list = getSearchHistory().filter(x => x.toLowerCase() !== q.toLowerCase());
+    list.unshift(q); localStorage.setItem('indtube_search_history', JSON.stringify(list.slice(0,15)));
+  } catch (_) {}
+}
+function showSearchSuggestions(items, heading) {
+  const box = document.getElementById('searchSuggestions');
+  if (!box) return;
+  if (!items || !items.length) { box.classList.remove('show'); box.innerHTML=''; return; }
+  box.innerHTML = (heading ? `<div class="search-suggestion-heading">${heading}</div>` : '') +
+    items.map((item,i) => {
+      const q = typeof item === 'string' ? item : item.text;
+      const img = item && item.thumb ? `<img src="${item.thumb}" alt="">` : '';
+      const icon = item && item.thumb ? ' ' : (heading === 'हाल की खोज' ? '◷' : '⌕');
+      return `<div class="search-suggestion-row" data-query="${String(q).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;')}" onclick="chooseSearchSuggestion(this.dataset.query)"><span class="ss-icon">${icon}</span><span class="ss-label">${String(q).replace(/&/g,'&amp;').replace(/</g,'&lt;')}</span>${img}<span class="ss-icon">↗</span></div>`;
+    }).join('');
+  box.classList.add('show');
+}
+function expandSearch() {
+  document.body.classList.add('search-page-open');
+  const header = document.getElementById('topHeader');
+  if (header) header.classList.add('search-expanded');
+  const q = document.getElementById('searchInput')?.value.trim() || '';
+  if (!q) showSearchSuggestions(getSearchHistory(), 'हाल की खोज');
+}
+function collapseSearch() {
+  setTimeout(() => {
+    const box = document.getElementById('searchSuggestions');
+    if (box) box.classList.remove('show');
+    const header = document.getElementById('topHeader');
+    if (header) header.classList.remove('search-expanded');
+  }, 160);
+}
+function handleSearchInput() {
+  expandSearch();
+  clearTimeout(searchDebounceTimer);
+  const q = document.getElementById('searchInput').value.trim();
+  if (!q) { showSearchSuggestions(getSearchHistory(), 'हाल की खोज'); return; }
+  const localMatches = getSearchHistory().filter(x => x.toLowerCase().includes(q.toLowerCase()));
+  showSearchSuggestions(localMatches, 'हाल की खोज');
+  if (q.length < 3) return;
+  searchDebounceTimer = setTimeout(async () => {
+    const token = ++suggestionRequestToken;
+    try { suggestionAbortController?.abort(); } catch (_) {}
+    suggestionAbortController = new AbortController();
+    const local = getSearchHistory().filter(x => x.toLowerCase().includes(q.toLowerCase()));
+    showSearchSuggestions(local, 'हाल की खोज');
+    try {
+      const url = 'https://suggestqueries.google.com/complete/search?client=firefox&ds=yt&q=' + encodeURIComponent(q);
+      const response = await fetch(url, { signal: suggestionAbortController.signal });
+      if (!response.ok) return;
+      const data = await response.json();
+      if (token !== suggestionRequestToken || document.getElementById('searchInput').value.trim() !== q) return;
+      const remote = Array.isArray(data[1]) ? data[1].slice(0,8) : [];
+      const merged = [...new Set([...remote, ...local])].slice(0,10);
+      showSearchSuggestions(merged, 'खोज सुझाव');
+    } catch (_) {
+      if (local.length) showSearchSuggestions(local, 'हाल की खोज');
+    }
+  }, 260);
+}
+function chooseSearchSuggestion(q) {
+  const input = document.getElementById('searchInput');
+  input.value = q;
+  document.getElementById('searchSuggestions')?.classList.remove('show');
+  executeSearch();
+}
+function startVoiceSearch() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { alert('Voice Search इस browser में उपलब्ध नहीं है। Chrome में microphone permission दें।'); return; }
+  try {
+    if (voiceRecognition) { voiceRecognition.stop(); voiceRecognition = null; }
+    voiceRecognition = new SR();
+    voiceRecognition.lang = 'hi-IN';
+    voiceRecognition.interimResults = true;
+    voiceRecognition.maxAlternatives = 1;
+    const box = document.getElementById('headerSearchBox');
+    const input = document.getElementById('searchInput');
+    box?.classList.add('listening');
+    expandSearch();
+    voiceRecognition.onresult = (event) => {
+      let transcript = '';
+      for (let i=event.resultIndex; i<event.results.length; i++) transcript += event.results[i][0].transcript;
+      input.value = transcript;
+      if (event.results[event.results.length-1].isFinal && transcript.trim()) executeSearch();
+    };
+    voiceRecognition.onerror = (event) => { if (event.error !== 'no-speech') alert('Voice Search error: ' + event.error); };
+    voiceRecognition.onend = () => { box?.classList.remove('listening'); voiceRecognition = null; };
+    voiceRecognition.start();
+  } catch (_) { document.getElementById('headerSearchBox')?.classList.remove('listening'); }
+}
+function handleSearchKey(e) {
+  if (e.key === 'Enter') { e.preventDefault(); executeSearch(); }
+  if (e.key === 'Escape') {
+    const input = document.getElementById('searchInput');
+    input.value = ''; input.blur(); document.body.classList.remove('search-page-open'); collapseSearch();
+  }
+}
+function executeSearch() {
+  const input = document.getElementById('searchInput');
+  const q = (input?.value || '').trim();
+  if (!q) { input?.focus(); return; }
+  saveSearchHistory(q);
+  currentQuery = q;
+  document.getElementById('searchSuggestions')?.classList.remove('show');
+  input?.blur();
+  document.body.classList.remove('search-page-open');
+  const currentView = history.state?.indtubeView || 'home';
+  const searchState = { indtubeView:'search', indtubeSearch:true, query:q };
+  // First search creates one Back step to Home; searches from the results page replace it.
+  try {
+    if (currentView === 'search') history.replaceState(searchState, '', '#search');
+    else history.pushState(searchState, '', '#search');
+  } catch (_) {}
+  document.querySelectorAll('.view-section').forEach(section => section.classList.remove('active'));
+  document.getElementById('homeFeedSection')?.classList.add('active');
+  document.getElementById('topHeader').style.display = 'flex';
+  document.getElementById('categoryBar').style.display = 'none';
+  document.getElementById('topHeader')?.classList.remove('search-expanded');
+  document.getElementById('searchResultsHeader').hidden = false;
+  document.getElementById('searchResultsHeader').querySelector('div').textContent = `Results for “${q}”`;
+  setActiveNav('navHome');
+  document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+  fetchYouTubeVideos(q, false);
+  // Related suggestions are already fetched while typing; avoid an extra duplicate request.
+  window.scrollTo({ top:0, behavior:'smooth' });
+}
+
+async function loadRelatedSearches(query) {
+  const holder = document.getElementById('relatedSearches');
+  if (!holder) return;
+  holder.innerHTML = '<span style="color:var(--text-secondary);font-size:13px">Related searches loading…</span>';
+  const token = ++suggestionRequestToken;
+  try {
+    const url = 'https://suggestqueries.google.com/complete/search?client=firefox&ds=yt&q=' + encodeURIComponent(query);
+    const response = await fetch(url);
+    if (!response.ok) throw new Error('suggestions unavailable');
+    const data = await response.json();
+    if (token !== suggestionRequestToken || currentQuery !== query) return;
+    const related = [...new Set((Array.isArray(data[1]) ? data[1] : []).map(x=>String(x).trim()).filter(x=>x && x.toLowerCase()!==query.toLowerCase()))].slice(0,8);
+    holder.innerHTML = related.length ? related.map(term => `<button type="button" class="chip" style="border-radius:18px" data-related="${escapeHtml(term)}" onclick="runRelatedSearch(this.dataset.related)">⌕ ${escapeHtml(term)}</button>`).join('') : '<span style="color:var(--text-secondary);font-size:13px">No related searches available.</span>';
+  } catch (_) {
+    holder.innerHTML = '<span style="color:var(--text-secondary);font-size:13px">Related searches अभी उपलब्ध नहीं हैं।</span>';
+  }
+}
+function runRelatedSearch(query) {
+  const input = document.getElementById('searchInput');
+  if (input) input.value = query;
+  executeSearch();
+}
+
+
+function openModal(id) { document.getElementById(id).classList.add('active'); }
+function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+function openNotifications() {
+  if (!userSettings.pushNotifications) { alert('Notifications बंद हैं। Settings में जाकर चालू करें।'); return; }
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission().then(() => alert('Notification permission: ' + Notification.permission));
+  } else alert('IndTube notifications: ' + (('Notification' in window) ? Notification.permission : 'इस ब्राउज़र में उपलब्ध नहीं'));
+}
+
+function handleCreateChannel() {
+  const name = document.getElementById('channelNameInput').value.trim();
+  if (!name) return;
+  persist('indtube_channel', { name });
+  closeModal('createChannelModal');
+  alert(`Channel profile "${name}" created.`);
+}
+
+function bindSettings() {
+  document.querySelectorAll('[data-setting]').forEach(input => {
+    const key = input.dataset.setting;
+    input.checked = !!userSettings[key];
+    input.addEventListener('change', async () => {
+      userSettings[key] = input.checked;
+      persist('indtube_settings', userSettings);
+      applySettingsToUI();
+      if (key === 'pushNotifications' && input.checked && 'Notification' in window && Notification.permission === 'default') {
+        try { await Notification.requestPermission(); } catch (_) {}
+      }
+    });
+  });
+}
+function applySettingsToUI() {
+  document.body.classList.toggle('light-theme', !userSettings.darkTheme);
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', userSettings.darkTheme ? '#0f0f0f' : '#f5f5f5');
+  document.querySelectorAll('[data-setting]').forEach(input => input.checked = !!userSettings[input.dataset.setting]);
+}
+function updateUserUI() {}
+function handleGoogleLogin() { alert('Google Login UI enabled.'); }
+
+function isShortFiltered(item) {
+  const id = getVideoId(item);
+  const channel = item?.snippet?.channelId || item?.snippet?.channelTitle || 'unknown';
+  const prefs = safeLoad('indtube_short_preferences', {});
+  const blocked = safeLoad('indtube_blocked_short_channels', []);
+  return !!(prefs[id]?.notInterested || blocked.includes(channel));
+}
+
+async function openShortsMode() {
+  try { history.pushState({ indtubeView: 'shorts' }, '', '#shorts'); } catch (_) {}
+  setActiveNav('navShorts');
+  document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active'));
+  document.getElementById('shortsViewer').classList.add('active');
+
+  if (!shortsList.length) {
+    try {
+      const data = await youtubeRequest('search', {
+        part: 'snippet', maxResults: 25, q: 'shorts', type: 'video',
+        videoDuration: 'short', regionCode: 'IN'
+      });
+      shortsList = (data.items || []).filter(item => !isShortFiltered(item));
+      shortsNextPageToken = data.nextPageToken || '';
+      shortsIndex = 0;
+    } catch(e) {
+      console.error('Shorts load failed:', e);
+    }
+  }
+  showCurrentShort();
+}
+
+async function loadMoreShorts() {
+  if (shortsLoadingMore || !shortsNextPageToken) return false;
+  shortsLoadingMore = true;
+  try {
+    const data = await youtubeRequest('search', {
+      part: 'snippet', maxResults: 25, q: 'shorts', type: 'video',
+      videoDuration: 'short', regionCode: 'IN', pageToken: shortsNextPageToken
+    });
+    const existing = new Set(shortsList.map(getVideoId));
+    (data.items || []).forEach(item => {
+      const id = getVideoId(item);
+      if (id && !existing.has(id) && !isShortFiltered(item)) {
+        shortsList.push(item);
+        existing.add(id);
+      }
+    });
+    shortsNextPageToken = data.nextPageToken || '';
+    return true;
+  } catch (e) {
+    console.error('More Shorts load failed:', e);
+    return false;
+  } finally {
+    shortsLoadingMore = false;
+  }
+}
+
+
+function toggleVideoDescription() {
+  const panel = document.getElementById('videoDescriptionPanel');
+  const title = document.getElementById('watchVideoTitle');
+  if (!panel || !title) return;
+  panel.hidden = !panel.hidden;
+  title.setAttribute('aria-expanded', String(!panel.hidden));
+  title.textContent = (currentVideoObj?.snippet?.title || 'Video') + (panel.hidden ? ' ▾' : ' ▴');
+}
+
+
+function toggleShortMoreMenu(event) {
+  event?.stopPropagation();
+  const menu = document.getElementById('shortMoreMenu');
+  const btn = document.getElementById('shortMoreBtn');
+  if (!menu) return;
+  const open = !menu.classList.contains('open');
+  menu.classList.toggle('open', open);
+  btn?.setAttribute('aria-expanded', String(open));
+}
+function closeShortMoreMenu() {
+  document.getElementById('shortMoreMenu')?.classList.remove('open');
+  document.getElementById('shortMoreBtn')?.setAttribute('aria-expanded','false');
+}
+function shortMoreToast(message) {
+  const el = document.getElementById('shortMoreToast');
+  if (!el) return;
+  el.textContent = message;
+  el.classList.add('show');
+  clearTimeout(window.__shortMoreToastTimer);
+  window.__shortMoreToastTimer = setTimeout(() => el.classList.remove('show'), 2300);
+}
+function shortPreference(kind) {
+  const item = shortsList[shortsIndex];
+  if (!item) return;
+  const id = getVideoId(item);
+  const prefs = safeLoad('indtube_short_preferences', {});
+  const channel = item.snippet?.channelId || item.snippet?.channelTitle || 'unknown';
+  prefs[id] = { ...(prefs[id] || {}), [kind]: true, channel, updatedAt: new Date().toISOString() };
+  persist('indtube_short_preferences', prefs);
+  closeShortMoreMenu();
+  if (kind === 'interested') {
+    shortMoreToast('Marked as Interested');
+  } else if (kind === 'notInterested') {
+    shortMoreToast('We will show you fewer Shorts like this');
+    setTimeout(() => { if (shortsIndex < shortsList.length - 1) nextShort(); }, 450);
+  } else {
+    const blocked = safeLoad('indtube_blocked_short_channels', []);
+    if (!blocked.includes(channel)) blocked.push(channel);
+    persist('indtube_blocked_short_channels', blocked);
+    shortMoreToast('Channel hidden from your Shorts on this device');
+    setTimeout(() => { if (shortsIndex < shortsList.length - 1) nextShort(); }, 450);
+  }
+}
+function reportCurrentShort() {
+  const item = shortsList[shortsIndex];
+  if (!item) return;
+  // Keep the three-dot trigger visible; close only its popup menu.
+  closeShortMoreMenu();
+  const categories = [
+    '1. Spam or misleading',
+    '2. Harassment or bullying',
+    '3. Harmful or dangerous content',
+    '4. Hate or abusive content',
+    '5. Sexual content',
+    '6. Violent or graphic content',
+    '7. Misinformation',
+    '8. Other'
+  ];
+  const selected = prompt('Aap kis wajah se report karna chahte hain?\\n\\n' + categories.join('\\n') + '\\n\\n1 se 8 tak number chunein:');
+  if (selected === null) return;
+  const categoryIndex = Number(selected.trim()) - 1;
+  if (!Number.isInteger(categoryIndex) || categoryIndex < 0 || categoryIndex >= categories.length) {
+    shortMoreToast('Sahi report category chunein');
+    return;
+  }
+  const category = categories[categoryIndex].replace(/^\\d+\\.\\s*/, '');
+  const details = prompt('Is report ke baare mein extra detail likhein (optional).\\nCancel karne par report submit nahi hogi:');
+  if (details === null) return;
+  const reports = safeLoad('indtube_short_reports', []);
+  reports.push({
+    videoId: getVideoId(item),
+    videoTitle: item.snippet?.title || '',
+    channel: item.snippet?.channelTitle || '',
+    category,
+    details: details.trim().slice(0, 240),
+    date: new Date().toISOString(),
+    status: 'saved_locally'
+  });
+  persist('indtube_short_reports', reports);
+  closeShortMoreMenu();
+  shortMoreToast('Report IndTube mein save ho gayi');
+}
+async function copyCurrentShortLink() {
+  const id = getCurrentShortId();
+  if (!id) return;
+  const link = 'https://www.youtube.com/shorts/' + encodeURIComponent(id);
+  closeShortMoreMenu();
+  try {
+    if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(link);
+    else { const field = document.createElement('textarea'); field.value = link; document.body.appendChild(field); field.select(); document.execCommand('copy'); field.remove(); }
+    shortMoreToast('Short link copied');
+  } catch (_) { shortMoreToast(link); }
+}
+document.addEventListener('click', event => {
+  if (!event.target.closest('.short-more-wrap')) closeShortMoreMenu();
+});
+
+function getCurrentShortId() { return getVideoId(shortsList[shortsIndex]); }
+function getShortCommentsStore() { return safeLoad('indtube_shorts_comments', {}); }
+function openShortComments() {
+  const panel = document.getElementById('shortCommentsPanel');
+  if (!panel) return;
+  panel.classList.add('open'); panel.setAttribute('aria-hidden','false');
+  renderShortComments();
+  setTimeout(() => document.getElementById('shortsCommentInput')?.focus(), 80);
+}
+function closeShortComments() {
+  const panel = document.getElementById('shortCommentsPanel');
+  panel?.classList.remove('open'); panel?.setAttribute('aria-hidden','true');
+}
+function renderShortComments() {
+  const id = getCurrentShortId();
+  const list = document.getElementById('shortCommentsList');
+  if (!list) return;
+  const all = getShortCommentsStore();
+  const comments = all[id] || [];
+  list.innerHTML = comments.length ? comments.map(c => `<div><strong>You</strong><div>${escapeHtml(c.text)}</div><small style="color:#aaa">${escapeHtml(c.date)}</small></div>`).join('') : '<p style="color:#aaa">Abhi koi comment nahi hai. Pehla comment karein.</p>';
+}
+function submitShortComment() {
+  const input = document.getElementById('shortsCommentInput');
+  const text = input?.value.trim();
+  const id = getCurrentShortId();
+  if (!text || !id) return;
+  const all = getShortCommentsStore();
+  all[id] ||= [];
+  all[id].push({text, date:'Just now'});
+  persist('indtube_shorts_comments', all);
+  input.value = '';
+  renderShortComments();
+}
+function likeShort(button) {
+  const id = getCurrentShortId();
+  if (!id) return;
+  const all = safeLoad('indtube_shorts_likes', {});
+  shortsLiked = !all[id];
+  if (shortsLiked) all[id] = true; else delete all[id];
+  persist('indtube_shorts_likes', all);
+  button.innerHTML = `${shortsLiked ? '♥' : '♡'}<span>Like</span>`;
+  button.style.color = shortsLiked ? '#ff4d6d' : '#fff';
+}
+function focusShortComment() { openShortComments(); }
+function toggleShortRepost(button) { button.classList.toggle('active'); button.style.color = button.classList.contains('active') ? '#ff9933' : '#fff'; }
+function toggleShortFollow(button) { button.textContent = button.textContent === 'Follow' ? 'Following' : 'Follow'; }
+function saveCurrentShort() {
+  const item = shortsList[shortsIndex]; if (!item) return;
+  const id = getVideoId(item);
+  const list = safeLoad('indtube_saved_shorts', []);
+  const index = list.findIndex(x => x.id === id);
+  if (index >= 0) list.splice(index,1); else list.push({id, snippet:item.snippet});
+  persist('indtube_saved_shorts', list);
+  closeShortMoreMenu();
+  const btn = document.getElementById('shortSaveBtn'); if (btn) btn.innerHTML = `${index >= 0 ? '▱' : '▣'}<span>${index >= 0 ? 'Save' : 'Saved'}</span>`;
+}
+function getFriendlyApiError(error) { return explainApiError(error); }
+
+function showCurrentShort() {
+  const item = shortsList[shortsIndex];
+  if (!item) return;
+  const id = getVideoId(item);
+  shortsLiked = !!safeLoad('indtube_shorts_likes', {})[id];
+  const likeBtn = document.getElementById('shortLikeBtn');
+  if (likeBtn) { likeBtn.innerHTML = `${shortsLiked ? '♥' : '♡'}<span>Like</span>`; likeBtn.style.color = shortsLiked ? '#ff4d6d' : '#fff'; }
+  closeShortComments();
+  closeShortMoreMenu();
+  document.getElementById('shortsCreatorName').textContent = item.snippet?.channelTitle || 'IndTube Creator';
+  document.getElementById('shortsCaption').textContent = item.snippet?.title || 'Watch this Short';
+  const shortsOrigin = (location.protocol === 'http:' || location.protocol === 'https:')
+    ? `&origin=${encodeURIComponent(location.origin)}` : '';
+  const shortsReferrer = encodeURIComponent(location.href || '');
+  document.getElementById('shortsIframeContainer').innerHTML =
+    `<iframe src="https://www.youtube.com/embed/${encodeURIComponent(id)}?autoplay=1&playsinline=1&rel=0&controls=1&enablejsapi=1${shortsOrigin}&widget_referrer=${shortsReferrer}"
+      referrerpolicy="origin" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen title="Short"></iframe>`;
+}
+
+async function nextShort() {
+  if (shortsIndex >= shortsList.length - 1) {
+    await loadMoreShorts();
+  }
+  if (shortsIndex < shortsList.length - 1) {
+    shortsIndex++;
+    showCurrentShort();
+  }
+}
+
+function previousShort() {
+  if (shortsIndex > 0) {
+    shortsIndex--;
+    showCurrentShort();
+  }
+}
+
+/* Swipe vertically anywhere on the Shorts video to change videos.
+   Overlay buttons and the comment field retain their normal behavior. */
+(function bindShortsSwipe() {
+  const stage = document.querySelector('.shorts-stage');
+  if (!stage) return;
+  let startX = 0, startY = 0, tracking = false;
+
+  stage.addEventListener('touchstart', event => {
+    if (event.target.closest('.shorts-actions-bar, .shorts-topbar, .shorts-bottom-info, .shorts-comment-footer, input, button')) {
+      tracking = false;
+      return;
+    }
+    const touch = event.changedTouches[0];
+    startX = touch.clientX;
+    startY = touch.clientY;
+    tracking = true;
+  }, { passive: true });
+
+  stage.addEventListener('touchend', async event => {
+    if (!tracking) return;
+    tracking = false;
+    const touch = event.changedTouches[0];
+    const dx = touch.clientX - startX;
+    const dy = touch.clientY - startY;
+    if (Math.abs(dy) > 45 && Math.abs(dy) > Math.abs(dx) * 1.2) {
+      event.preventDefault();
+      if (dy < 0) await nextShort(); // Swipe up = next Short
+      else previousShort();          // Swipe down = previous Short
+    }
+  }, { passive: false });
+
+  // Desktop testing: mouse wheel also advances the feed.
+  let wheelLock = false;
+  stage.addEventListener('wheel', async event => {
+    if (wheelLock || Math.abs(event.deltaY) < 25) return;
+    wheelLock = true;
+    if (event.deltaY > 0) await nextShort();
+    else previousShort();
+    setTimeout(() => { wheelLock = false; }, 450);
+  }, { passive: true });
+})();
+
+function closeShorts() {
+  document.getElementById('shortsViewer').classList.remove('active');
+  document.getElementById('shortsIframeContainer').innerHTML = '';
+  switchTab('home');
+}
+</script>
+</body>
+</html>

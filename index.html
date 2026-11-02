@@ -864,8 +864,12 @@ let searchDebounceTimer = null;
 let suggestionAbortController = null;
 let feedRequestVersion = 0;
 const youtubeInflightRequests = new Map();
+// Serialize distinct API calls and pause briefly after a rate-limit response.
+let youtubeRequestQueue = Promise.resolve();
+let youtubeNextRequestAt = 0;
+let youtubeRateLimitUntil = 0;
 // Rotate the home feed category on each fresh app open to avoid the same first video.
-const homeFeedCategories = ['0','10','20','17','24','28','22','25'];
+const homeFeedCategories = ['0','10','20','17','24','28','22','25','26','27'];
 let homeFeedCategoryId = '0';
 try {
   const openCount = Number(localStorage.getItem('indtube_home_open_count') || '0');
@@ -928,7 +932,8 @@ window.onload = () => {
 function explainApiError(error) {
   const code = String(error?.message || error || 'unknown').toLowerCase();
   if (code.includes('153')) return 'YouTube Player Error 153: app ko HTTPS website par host karein. Browser referrer policy strict-origin-when-cross-origin rakhein; file:// ya no-referrer mode mein playback nahi chalega.';
-  if (code.includes('ratelimitexceeded') || code.includes('userratelimitexceeded')) return 'YouTube API पर बहुत तेज़ requests जा रही हैं। IndTube ने थोड़ी देर के लिए retry रोक दिया है; कुछ सेकंड बाद कोशिश करें।';
+  if (code.includes('rate_limit_cooldown')) return 'YouTube API ने हाल में requests सीमित की थीं। 1 मिनट बाद दोबारा कोशिश करें।';
+  if (code.includes('ratelimitexceeded') || code.includes('userratelimitexceeded')) return 'YouTube API पर बहुत तेज़ requests जा रही हैं। IndTube ने 1 मिनट के लिए requests रोक दी हैं; फिर कोशिश करें।';
   if (code.includes('quota') || code.includes('dailylimit')) return 'YouTube API की आज की quota सीमा पूरी हो गई है। Quota reset होने तक इंतज़ार करें या Google Cloud Console में quota देखें।';
   if (code.includes('keyinvalid') || code.includes('key_invalid') || code.includes('invalid api key')) return 'API Key गलत या निष्क्रिय है। Google Cloud Console में YouTube Data API v3 और API Key जाँचें।';
   if (code.includes('keyexpired')) return 'API Key की अवधि समाप्त है। Google Cloud Console में नई key बनाएँ।';
@@ -954,7 +959,13 @@ async function youtubeRequest(endpoint, params = {}) {
   } catch (_) {}
   // Identical simultaneous requests share one API call (prevents duplicate quota use).
   if (youtubeInflightRequests.has(cacheKey)) return youtubeInflightRequests.get(cacheKey);
-  const request = (async () => {
+  const request = youtubeRequestQueue.then(async () => {
+    const waitForCooldown = Math.max(0, youtubeRateLimitUntil - Date.now());
+    if (waitForCooldown) throw new Error('RATE_LIMIT_COOLDOWN');
+    const waitForSpacing = Math.max(0, youtubeNextRequestAt - Date.now());
+    if (waitForSpacing) await new Promise(resolve => setTimeout(resolve, waitForSpacing));
+    youtubeNextRequestAt = Date.now() + 450;
+
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 18000);
     let response;
@@ -968,11 +979,17 @@ async function youtubeRequest(endpoint, params = {}) {
     try { data = await response.json(); } catch (_) { throw new Error(`HTTP ${response.status}`); }
     if (!response.ok || data.error) {
       const reason = data?.error?.errors?.[0]?.reason || data?.error?.status || data?.error?.message || `HTTP ${response.status}`;
+      const normalized = String(reason).toLowerCase();
+      if (normalized.includes('ratelimitexceeded') || normalized.includes('userratelimitexceeded')) {
+        youtubeRateLimitUntil = Date.now() + 60000;
+      }
       throw new Error(reason);
     }
     try { sessionStorage.setItem(cacheKey, JSON.stringify({ savedAt: Date.now(), data })); } catch (_) {}
     return data;
-  })();
+  });
+  // Keep the queue usable after a failed request while preserving request order.
+  youtubeRequestQueue = request.catch(() => {});
   youtubeInflightRequests.set(cacheKey, request);
   try { return await request; }
   finally { if (youtubeInflightRequests.get(cacheKey) === request) youtubeInflightRequests.delete(cacheKey); }
@@ -1035,7 +1052,14 @@ async function loadMoreVideos(initial = false, requestVersion = feedRequestVersi
       }
     }
     if (requestVersion !== feedRequestVersion) return;
-    const items = (data.items || []).filter(item => getVideoId(item) && item.snippet);
+    let items = (data.items || []).filter(item => getVideoId(item) && item.snippet);
+    // Shuffle the first home batch so refreshes do not always show the same ordering.
+    if (initial && !currentQuery && currentFeedMode === 'home') {
+      for (let i = items.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [items[i], items[j]] = [items[j], items[i]];
+      }
+    }
     const fresh = items.filter(item => !loadedVideoIds.has(getVideoId(item)));
     fresh.forEach(item => loadedVideoIds.add(getVideoId(item)));
     if (initial) container.innerHTML = '';
@@ -1124,7 +1148,13 @@ function openWatchScreen(videoId, snippet) {
   // A newly selected video replaces the previous mini-player.
   const miniPlayer = document.getElementById('miniPlayer');
   const miniHost = document.getElementById('miniPlayerVideo');
-  if (miniHost) miniHost.innerHTML = '';
+  const watchSection = document.getElementById('watchSection');
+  // Every newly tapped video must start in the full watch view, never inherit mini mode.
+  if (watchSection) {
+    watchSection.classList.remove('mini-mode');
+    ['left','top','right','bottom','transform','position','width','zIndex','maxWidth','display'].forEach(prop => watchSection.style[prop] = '');
+  }
+  if (miniHost) miniHost.replaceChildren();
   if (miniPlayer) miniPlayer.hidden = true;
   currentVideoObj = { id: videoId, snippet };
   document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active'));
@@ -1168,8 +1198,12 @@ function openWatchScreen(videoId, snippet) {
   document.getElementById('saveBtn').innerText = watchLaterList.some(v => v.id === videoId) ? '✔ Saved' : '➕ Watch Later';
   
   renderComments();
-  loadHorizontalShortsShelf();
-  fetchRelatedVideos(snippet.title);
+  // Do not auto-run extra YouTube search.list calls on every video open.
+  // They consume substantial quota and were a major source of rate limiting.
+  const shortsShelf = document.getElementById('shortsShelfSection');
+  if (shortsShelf) shortsShelf.style.display = 'none';
+  const relatedBox = document.getElementById('relatedFeedContainer');
+  if (relatedBox) relatedBox.innerHTML = '<p style="color:var(--text-secondary);padding:12px">Related videos खोजने के लिए Home पर वापस जाएँ और search करें।</p>';
 }
 
 
@@ -1215,19 +1249,7 @@ async function loadRealVideoStats(videoId, channelId) {
   } catch (e) {
     console.warn('Public video statistics unavailable:', e);
   }
-  try {
-    const data = await youtubeRequest('commentThreads', {
-      part:'snippet', videoId, maxResults:20, order:'relevance', textFormat:'plainText'
-    });
-    const rows = (data.items || []).map(x => ({
-      author: x.snippet?.topLevelComment?.snippet?.authorDisplayName || 'YouTube user',
-      text: x.snippet?.topLevelComment?.snippet?.textDisplay || ''
-    }));
-    if (currentVideoObj?.id === videoId) renderRealComments(rows);
-  } catch (e) {
-    // Comments may be disabled, moderated, or unavailable for this video/API key.
-    console.warn('Public comments unavailable:', e);
-  }
+  // Public commentThreads calls are intentionally not automatic to conserve API quota.
 }
 function renderRealComments(rows) {
   const list = document.getElementById('commentsList');
@@ -1654,7 +1676,7 @@ function switchTab(tab) {
     const related = document.getElementById('relatedSearches'); if (related) related.innerHTML = '';
     document.body.classList.remove('search-page-open');
     setActiveNav('navHome'); document.getElementById('homeFeedSection').classList.add('active');
-    fetchYouTubeVideos('', false);
+    if (!document.querySelector('#feedContainer .video-card')) fetchYouTubeVideos('', false);
   } else if (tab === 'watchLater') {
     setActiveNav('navWatchLater'); document.getElementById('watchLaterSection').classList.add('active'); renderWatchLaterScreen();
   } else if (tab === 'you') {
@@ -1987,24 +2009,50 @@ function isShortFiltered(item) {
   return !!(prefs[id]?.notInterested || blocked.includes(channel));
 }
 
+function pauseLongVideoForShorts() {
+  const main = document.getElementById('mainPlayerContainer');
+  const mini = document.getElementById('miniPlayerVideo');
+  // Pause any local HTML5 player.
+  document.querySelectorAll('#mainPlayerContainer video, #miniPlayerVideo video').forEach(video => {
+    try { video.pause(); } catch (_) {}
+  });
+  // Ask any YouTube iframe player to pause without destroying its playback position.
+  document.querySelectorAll('#mainPlayerContainer iframe, #miniPlayerVideo iframe').forEach(frame => {
+    try {
+      frame.contentWindow?.postMessage(JSON.stringify({
+        event: 'command', func: 'pauseVideo', args: ''
+      }), '*');
+    } catch (_) {}
+  });
+}
+
 async function openShortsMode() {
+  pauseLongVideoForShorts();
   try { history.pushState({ indtubeView: 'shorts' }, '', '#shorts'); } catch (_) {}
   setActiveNav('navShorts');
   document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active'));
-  document.getElementById('shortsViewer').classList.add('active');
+  const viewer = document.getElementById('shortsViewer');
+  if (viewer) viewer.classList.add('active');
+  const shortContainer = document.getElementById('shortsIframeContainer');
+  if (shortContainer) shortContainer.innerHTML = '<div class="loader-box"><div class="spinner"></div><p>Loading Shorts...</p></div>';
 
+  // Always request a fresh short-only result set when the Shorts tab is tapped.
+  try {
+    const data = await youtubeRequest('search', {
+      part: 'snippet', maxResults: 25, q: 'shorts #shorts', type: 'video',
+      videoDuration: 'short', regionCode: 'IN', order: 'date'
+    });
+    shortsList = (data.items || []).filter(item => !isShortFiltered(item));
+    shortsNextPageToken = data.nextPageToken || '';
+    shortsIndex = 0;
+  } catch(e) {
+    console.error('Shorts load failed:', e);
+    if (shortContainer) shortContainer.innerHTML = '<div class="loader-box"><p>Shorts अभी लोड नहीं हो पाए। फिर कोशिश करें।</p></div>';
+    return;
+  }
   if (!shortsList.length) {
-    try {
-      const data = await youtubeRequest('search', {
-        part: 'snippet', maxResults: 25, q: 'shorts', type: 'video',
-        videoDuration: 'short', regionCode: 'IN'
-      });
-      shortsList = (data.items || []).filter(item => !isShortFiltered(item));
-      shortsNextPageToken = data.nextPageToken || '';
-      shortsIndex = 0;
-    } catch(e) {
-      console.error('Shorts load failed:', e);
-    }
+    if (shortContainer) shortContainer.innerHTML = '<div class="loader-box"><p>अभी Shorts नहीं मिले।</p></div>';
+    return;
   }
   showCurrentShort();
 }

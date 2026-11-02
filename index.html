@@ -1176,7 +1176,6 @@ function renderFeedCards(items, targetContainerId, append = false) {
           <h3>${escapeHtml(snippet.title)}</h3>
           <p class="card-meta-line" style="display:flex;flex-wrap:wrap;align-items:center;gap:5px;font-size:12px;color:var(--text-secondary);">
             <span>${escapeHtml(snippet.channelTitle || 'YouTube')} • ${snippet.publishedAt ? new Date(snippet.publishedAt).toLocaleDateString() : ''}</span>
-            <span class="card-public-stats" aria-live="polite" style="font-size:12px;color:var(--text-secondary);margin:0;">आँकड़े लोड हो रहे हैं…</span>
           </p>
         </div>
       </div>`;
@@ -1270,18 +1269,14 @@ async function hydrateVideoCardStats(items) {
 }
 
 function formatCompactCount(value) {
-  const n = Number(value || 0);
-  if (!Number.isFinite(n)) return '0';
+  const n = Number(value);
+  if (!Number.isFinite(n) || n < 0) return '—';
   if (n < 1000) return Math.floor(n).toLocaleString('en-IN');
-  const units = [
-    { value: 1e9, suffix: 'B' },
-    { value: 1e6, suffix: 'M' },
-    { value: 1e3, suffix: 'K' }
-  ];
-  const unit = units.find(x => n >= x.value);
-  const scaled = n / unit.value;
-  const digits = scaled >= 100 ? 0 : scaled >= 10 ? 0 : 1;
-  return `${Number(scaled.toFixed(digits)).toString()}${unit.suffix}`;
+  return new Intl.NumberFormat('en-US', {
+    notation: 'compact',
+    compactDisplay: 'short',
+    maximumFractionDigits: 2
+  }).format(n);
 }
 
 // Public YouTube statistics/comments are fetched from YouTube Data API.
@@ -1300,7 +1295,7 @@ async function loadRealVideoStats(videoId, channelId) {
   const subsEl = document.getElementById('watchSubscribersCount');
   const errorEl = document.getElementById('watchStatsError');
   if (errorEl) { errorEl.textContent = ''; errorEl.style.display = 'none'; }
-  if (sub) sub.textContent = 'Subscribers लोड हो रहे हैं…';
+  if (sub) sub.textContent = 'Subscribers';
   if (viewsEl) viewsEl.textContent = 'लोड हो रहे हैं…';
   if (likesEl) likesEl.textContent = 'लोड हो रहे हैं…';
   if (subsEl) subsEl.textContent = 'लोड हो रहे हैं…';
@@ -1342,8 +1337,8 @@ async function loadRealVideoStats(videoId, channelId) {
         const channel = channelData.items?.[0];
         const count = channel?.statistics?.subscriberCount;
         const formattedSubs = count != null
-          ? `${formatCompactCount(count)} SUBSCRIBER'S`
-          : "— SUBSCRIBER'S";
+          ? `${formatCompactCount(count)} SUBSCRIBERS`
+          : 'Subscribers unavailable';
         if (subsEl) subsEl.textContent = formattedSubs;
         if (sub) sub.textContent = formattedSubs;
       } catch (subscriberError) {

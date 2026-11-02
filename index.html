@@ -207,6 +207,12 @@ body { background-color: var(--bg); color: var(--text); overflow-x: hidden; padd
 .channel-text-info p { font-size: 12px; color: var(--text-secondary); }
 
 .subscribe-wrapper { position: relative; }
+#channelSubTag { display: block; max-width: 180px; overflow-wrap: anywhere; font-size: 12px; color: var(--text-secondary); margin-top: 3px; }
+@media (max-width: 420px) {
+  .channel-row-card { gap: 8px; }
+  .subscribe-wrapper { flex-shrink: 0; }
+  #channelSubTag { max-width: 135px; }
+}
 .subscribe-btn {
   background: #fff; color: #000; border: none; padding: 8px 16px; border-radius: 20px; font-weight: 700; font-size: 13px; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 6px;
 }
@@ -312,7 +318,7 @@ input:checked + .slider:before { transform: translateX(18px); }
   flex-direction: column; justify-content: flex-start; align-items: center;
 }
 .shorts-viewer.active { display: flex; }
-.shorts-stage { position: relative; width: 100%; max-width: 520px; height: calc(100% - 76px); flex: 1 1 auto; min-height: 0; background: #111; overflow: hidden; touch-action: pan-x; }
+.shorts-stage { position: relative; width: 100%; max-width: 520px; height: calc(100% - 76px); flex: 1 1 auto; min-height: 0; background: #111; overflow: hidden; touch-action: none; overscroll-behavior: contain; }
 .shorts-iframe-box { position:absolute; inset:0; width:100%; height:100%; }
 .shorts-iframe-box iframe { width:100%; height:100%; border:0; }
 .shorts-topbar { position:absolute; z-index:12; top: max(12px, env(safe-area-inset-top)); left:12px; }
@@ -338,7 +344,7 @@ input:checked + .slider:before { transform: translateX(18px); }
 .short-comments-compose { display:flex; gap:8px; }
 .short-comments-compose input { flex:1; min-width:0; border:1px solid #555; background:#292929; color:#fff; border-radius:22px; padding:11px 14px; }
 .short-comments-compose button { border:0; background:#ff9933; color:#111; border-radius:22px; padding:0 16px; font-weight:700; }
-#shortsGestureZone { position:absolute; z-index:9; inset:0; background:transparent; touch-action:pan-x; }
+#shortsGestureZone { position:absolute; z-index:9; inset:0; background:transparent; touch-action:none; overscroll-behavior:contain; }
 @media (min-width:600px) { .shorts-stage,.shorts-comment-footer { max-width:420px; } }
 
 
@@ -997,6 +1003,20 @@ async function youtubeRequest(endpoint, params = {}) {
   finally { if (youtubeInflightRequests.get(cacheKey) === request) youtubeInflightRequests.delete(cacheKey); }
 }
 
+function getSeenHomeVideoIds() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('indtube_seen_home_video_ids') || '[]');
+    return new Set(Array.isArray(saved) ? saved.filter(Boolean).slice(-500) : []);
+  } catch (_) { return new Set(); }
+}
+function rememberHomeVideoIds(ids) {
+  try {
+    const old = getSeenHomeVideoIds();
+    (ids || []).forEach(id => { if (id) old.add(id); });
+    // Keep bounded storage; avoids an ever-growing localStorage record.
+    localStorage.setItem('indtube_seen_home_video_ids', JSON.stringify([...old].slice(-500)));
+  } catch (_) {}
+}
 function resetFeedState(query = '', mode = 'home') {
   currentQuery = query;
   currentFeedMode = mode;
@@ -1021,7 +1041,7 @@ async function loadMoreVideos(initial = false, requestVersion = feedRequestVersi
   isLoadingVideos = true;
   const container = document.getElementById('feedContainer');
   try {
-    const params = { part: 'snippet', maxResults: initial ? 12 : 20, regionCode: 'IN', pageToken: nextPageToken };
+    const params = { part: 'snippet', maxResults: initial ? 25 : 25, regionCode: 'IN', pageToken: nextPageToken };
     let data;
     if (currentQuery) {
       params.q = currentQuery;
@@ -1029,27 +1049,30 @@ async function loadMoreVideos(initial = false, requestVersion = feedRequestVersi
       params.order = 'relevance';
       data = await youtubeRequest('search', params);
     } else {
-      // Prefer the low-quota mostPopular endpoint. If it is unavailable or returns
-      // no videos for this region/category, fall back to a normal YouTube search.
+      // Mix category-specific popular videos with a rotating India-wide discovery query.
+      // The YouTube Data API still needs a valid key for public feed retrieval.
+      const homeTopics = ['India trending videos', 'Hindi music videos', 'Indian comedy videos',
+        'Indian gaming videos', 'Indian movies trailers', 'Indian education videos',
+        'Indian sports highlights', 'Indian technology videos', 'Indian travel videos',
+        'Indian cooking videos', 'Indian news videos', 'Indian short films'];
+      const topicIndex = Math.floor(Date.now() / (6 * 60 * 60 * 1000)) % homeTopics.length;
       try {
         data = await youtubeRequest('videos', {
           part: 'snippet,statistics,contentDetails', chart: 'mostPopular',
-          regionCode: 'IN', maxResults: initial ? 12 : 20, pageToken: nextPageToken,
+          regionCode: 'IN', maxResults: 25, pageToken: nextPageToken,
           ...(homeFeedCategoryId !== '0' ? { categoryId: homeFeedCategoryId } : {})
         });
       } catch (homeError) {
-        const reason = String(homeError?.message || homeError).toLowerCase();
-        if (/keyinvalid|key_invalid|invalid api key|refererblocked|ipreferer|accessnotconfigured/.test(reason)) throw homeError;
-        console.warn('Home chart endpoint failed; using search fallback:', homeError);
+        console.warn('Home chart endpoint fallback:', homeError);
         data = await youtubeRequest('search', {
-          part: 'snippet', type: 'video', q: 'trending videos India', order: 'relevance',
-          regionCode: 'IN', maxResults: initial ? 12 : 20, pageToken: nextPageToken
+          part: 'snippet', type: 'video', q: homeTopics[topicIndex], order: 'date',
+          regionCode: 'IN', maxResults: 25, pageToken: nextPageToken
         });
       }
       if ((!data.items || !data.items.length) && initial) {
         data = await youtubeRequest('search', {
-          part: 'snippet', type: 'video', q: 'popular videos India', order: 'relevance',
-          regionCode: 'IN', maxResults: 12
+          part: 'snippet', type: 'video', q: homeTopics[(topicIndex + 1) % homeTopics.length],
+          order: 'date', regionCode: 'IN', maxResults: 25
         });
       }
     }
@@ -1062,19 +1085,39 @@ async function loadMoreVideos(initial = false, requestVersion = feedRequestVersi
         [items[i], items[j]] = [items[j], items[i]];
       }
     }
-    const fresh = items.filter(item => !loadedVideoIds.has(getVideoId(item)));
+    const seenHomeIds = (!currentQuery && currentFeedMode === 'home') ? getSeenHomeVideoIds() : new Set();
+    let fresh = items.filter(item => !loadedVideoIds.has(getVideoId(item)));
+    // On a new home visit, avoid recently seen videos whenever possible.
+    if (initial && !currentQuery && currentFeedMode === 'home') {
+      const unseen = fresh.filter(item => !seenHomeIds.has(getVideoId(item)));
+      if (unseen.length >= 6) fresh = unseen;
+      // Shuffle fresh home cards so every opening has a different visual order.
+      for (let i = fresh.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [fresh[i], fresh[j]] = [fresh[j], fresh[i]];
+      }
+    }
     fresh.forEach(item => loadedVideoIds.add(getVideoId(item)));
+    if (!currentQuery && currentFeedMode === 'home') rememberHomeVideoIds(fresh.map(getVideoId));
     if (initial) container.innerHTML = '';
     if (fresh.length) renderFeedCards(fresh, 'feedContainer', true);
-    if (!fresh.length && initial) container.innerHTML = '<div class="loader-box"><p>No videos found. Try another search.</p></div>';
+    if (!fresh.length && initial) {
+      // If API results are all previously seen, still show valid results rather than a blank feed.
+      const fallbackFresh = items.slice(0, 12);
+      fallbackFresh.forEach(item => loadedVideoIds.add(getVideoId(item)));
+      if (fallbackFresh.length) renderFeedCards(fallbackFresh, 'feedContainer', true);
+      else container.innerHTML = '<div class="loader-box"><p>Abhi naye videos nahi mile. Thodi der baad refresh karein.</p></div>';
+    }
     nextPageToken = data.nextPageToken || '';
     hasMoreVideos = Boolean(nextPageToken);
   } catch (error) {
     if (requestVersion === feedRequestVersion) {
       console.error('IndTube video feed error:', error);
-      const message = explainApiError(error);
       const hasVisibleVideos = container.querySelector('.video-card');
-      const errorBox = `<div class="loader-box feed-retry-notice"><p><strong>${hasVisibleVideos ? 'Aur videos abhi load nahi ho paaye.' : 'Videos load nahi ho paaye.'}</strong></p><p style="max-width:520px;margin:8px auto;color:var(--text-secondary)">${escapeHtml(message)}</p><button class="action-pill" type="button" onclick="retryVideoFeed()">Dobara Koshish Karein</button></div>`;
+      const friendly = /quota|keyinvalid|key_invalid|invalid api key|referer|accessnotconfigured|403/i.test(String(error?.message || error))
+        ? 'Videos abhi load nahi ho pa rahe. Thodi der baad dobara try karein.'
+        : 'Internet connection check karke dobara try karein.';
+      const errorBox = `<div class="loader-box feed-retry-notice"><p><strong>${hasVisibleVideos ? 'Aur videos abhi load nahi ho paaye.' : 'Videos abhi load nahi ho paaye.'}</strong></p><p style="max-width:520px;margin:8px auto;color:var(--text-secondary)">${friendly}</p><button class="action-pill" type="button" onclick="retryVideoFeed()">Dobara Koshish Karein</button></div>`;
       // A failed next-page request must never erase videos already displayed.
       if (hasVisibleVideos) {
         container.querySelector('.feed-retry-notice')?.remove();
@@ -1139,8 +1182,8 @@ function renderFeedCards(items, targetContainerId, append = false) {
       </div>`;
     container.appendChild(card);
   });
+  // Avoid extra API requests for each feed batch; card views are optional.
   hydrateChannelAvatars(items);
-  hydrateVideoCardStats(items);
 }
 
 /* Main playback navigation restored: all video cards route through this function. */
@@ -1221,7 +1264,7 @@ async function hydrateVideoCardStats(items) {
     console.warn('Video-card view statistics unavailable:', error);
     cardMap.forEach(cards => cards.forEach(card => {
       const target = card.querySelector('.card-public-stats');
-      if (target) target.textContent = explainApiError(error);
+      if (target) target.textContent = 'Views unavailable';
     }));
   }
 }
@@ -1287,41 +1330,31 @@ async function loadRealVideoStats(videoId, channelId) {
     if (commentTag) commentTag.textContent = comments;
     if (commentTotal) commentTotal.textContent = comments;
 
-    // Use the channelId returned by YouTube's video resource first. This avoids
-    // accidentally requesting a stale/mismatched channel ID from the UI state.
-    const resolvedChannelId = video.snippet?.channelId || channelId;
-    if (resolvedChannelId) {
+    // Fetch the creator's real public subscriber total from YouTube.
+    // YouTube may hide or round subscriber counts; use the value returned by API.
+    if (channelId) {
       try {
-        const ch = await youtubeRequest('channels', { part: 'statistics,snippet', id: resolvedChannelId });
+        const channelData = await youtubeRequest('channels', {
+          part: 'statistics',
+          id: channelId
+        });
         if (token !== realStatsRequestToken || currentVideoObj?.id !== videoId) return;
-        const channel = ch.items?.find(item => item.id === resolvedChannelId) || ch.items?.[0];
+        const channel = channelData.items?.[0];
         const count = channel?.statistics?.subscriberCount;
-        if (count != null && Number.isFinite(Number(count))) {
-          const exactCount = Number(count);
-          if (subsEl) subsEl.textContent = exactCount.toLocaleString('en-IN');
-          if (sub) sub.textContent = `${formatCompactCount(exactCount)} subscribers`;
-        } else if (channel) {
-          // YouTube intentionally omits subscriberCount for channels that hide it.
-          if (subsEl) subsEl.textContent = 'छिपाए गए';
-          if (sub) sub.textContent = 'Subscriber count hidden by channel';
-        } else {
-          throw new Error('CHANNEL_NOT_FOUND');
-        }
-      } catch (channelError) {
+        const formattedSubs = count != null
+          ? `${formatCompactCount(count)} SUBSCRIBER'S`
+          : "— SUBSCRIBER'S";
+        if (subsEl) subsEl.textContent = formattedSubs;
+        if (sub) sub.textContent = formattedSubs;
+      } catch (subscriberError) {
         if (token !== realStatsRequestToken || currentVideoObj?.id !== videoId) return;
-        const reason = String(channelError?.message || channelError);
-        if (reason === 'CHANNEL_NOT_FOUND') {
-          if (subsEl) subsEl.textContent = 'Channel नहीं मिला';
-          if (sub) sub.textContent = 'Channel information unavailable';
-        } else {
-          if (subsEl) subsEl.textContent = 'API error';
-          if (sub) sub.textContent = 'Subscriber count API error';
-          showWatchStatsError('Views/likes मिल गए, लेकिन subscriber count API request असफल हुई: ' + explainApiError(channelError) + ' API key, quota और YouTube Data API v3 permissions जाँचें।');
-        }
+        if (subsEl) subsEl.textContent = '— SUBSCRIBER\'S';
+        if (sub) sub.textContent = '— SUBSCRIBER\'S';
+        console.warn('Subscriber count unavailable:', subscriberError);
       }
     } else {
-      if (subsEl) subsEl.textContent = 'Channel ID नहीं मिला';
-      if (sub) sub.textContent = 'Channel ID unavailable';
+      if (subsEl) subsEl.textContent = '— SUBSCRIBER\'S';
+      if (sub) sub.textContent = '— SUBSCRIBER\'S';
     }
   } catch (e) {
     if (token !== realStatsRequestToken || currentVideoObj?.id !== videoId) return;
@@ -1329,10 +1362,10 @@ async function loadRealVideoStats(videoId, channelId) {
     const message = explainApiError(e);
     if (viewsEl) viewsEl.textContent = 'लोड नहीं हुआ';
     if (likesEl) likesEl.textContent = 'लोड नहीं हुआ';
-    if (subsEl) subsEl.textContent = 'लोड नहीं हुआ';
-    if (sub) sub.textContent = 'Subscriber stats unavailable';
+    if (subsEl) subsEl.textContent = '— SUBSCRIBER\'S';
+    if (sub) sub.textContent = '— SUBSCRIBER\'S';
     if (like && like.textContent === '…') like.textContent = '—';
-    showWatchStatsError('YouTube से आँकड़े नहीं आए: ' + message + ' नीचे Retry दबाएँ या अपनी working YouTube Data API v3 key सेट करें.');
+    showWatchStatsError('वीडियो आँकड़े अभी उपलब्ध नहीं हैं। बाद में फिर कोशिश करें।');
   }
 }
 function retryWatchPublicStats() {
@@ -1811,8 +1844,8 @@ function openCreatorChannelInIndTube(channelId, channelName) {
   document.getElementById('categoryBar').style.display = 'none';
   document.getElementById('topHeader').style.display = 'flex';
   feed.innerHTML = `<div class="loader-box"><div class="spinner"></div>IndTube channel load ho raha hai...</div>`;
-  const q = `https://www.googleapis.com/youtube/v3/search?part=snippet&channelId=${encodeURIComponent(channelId)}&type=video&order=date&maxResults=24&key=${encodeURIComponent(API_KEY)}`;
-  fetch(q).then(r=>r.json()).then(data=>{
+  youtubeRequest('search', { part:'snippet', channelId, type:'video', order:'date', maxResults:24 })
+  .then(data=>{
     const items = data.items || [];
     feed.innerHTML = `<div style="grid-column:1/-1;padding:14px;background:var(--surface);border-radius:12px"><h2>${escapeHTML(channelName||'Creator')}</h2><p style="color:var(--text-secondary)">IndTube Creator Channel · ${items.length} videos</p></div>`;
     if (!items.length) { feed.innerHTML += '<p style="padding:16px">Is channel ke videos abhi available nahi hain.</p>'; return; }
@@ -1824,7 +1857,7 @@ function openCreatorChannelInIndTube(channelId, channelName) {
       card.onclick=()=>playVideo(id,sn.title||'Video',sn.channelTitle||channelName||'Creator',sn.channelId||channelId);
       feed.appendChild(card);
     });
-  }).catch(()=>{feed.innerHTML='<p style="padding:16px">Channel load nahi hua. Internet/API key check karein.</p>';});
+  }).catch(()=>{feed.innerHTML='<p style="padding:16px;color:var(--text-secondary)">Creator ke videos abhi load nahi ho paaye. Thodi der baad try karein.</p>';});
 }
 function switchTab(tab) {
   if (tab !== 'home' || (!currentQuery && currentFeedMode === 'home')) {
@@ -1854,7 +1887,8 @@ function switchTab(tab) {
     const related = document.getElementById('relatedSearches'); if (related) related.innerHTML = '';
     document.body.classList.remove('search-page-open');
     setActiveNav('navHome'); document.getElementById('homeFeedSection').classList.add('active');
-    if (!document.querySelector('#feedContainer .video-card')) fetchYouTubeVideos('', false);
+    // Every Home visit asks for a fresh batch; recently viewed IDs are filtered out.
+    fetchYouTubeVideos('', false);
   } else if (tab === 'watchLater') {
     setActiveNav('navWatchLater'); document.getElementById('watchLaterSection').classList.add('active'); renderWatchLaterScreen();
   } else if (tab === 'you') {
@@ -2497,7 +2531,7 @@ function previousShort() {
   let startX = 0, startY = 0, tracking = false;
 
   stage.addEventListener('touchstart', event => {
-    if (event.target.closest('.shorts-actions-bar, .shorts-topbar, .shorts-bottom-info, .shorts-comment-footer, input, button')) {
+    if (event.target.closest('.shorts-actions-bar, .shorts-topbar, .shorts-bottom-info, .shorts-comment-footer, .short-comments-panel, input, button')) {
       tracking = false;
       return;
     }
@@ -2507,18 +2541,26 @@ function previousShort() {
     tracking = true;
   }, { passive: true });
 
+  // Prevent the embedded player/browser from swallowing vertical swipe gestures.
+  stage.addEventListener('touchmove', event => {
+    if (!tracking || !event.changedTouches?.length) return;
+    const touch = event.changedTouches[0];
+    const dx = touch.clientX - startX;
+    const dy = touch.clientY - startY;
+    if (Math.abs(dy) > Math.abs(dx) * 1.1) event.preventDefault();
+  }, { passive: false });
+
   stage.addEventListener('touchend', async event => {
     if (!tracking) return;
     tracking = false;
     const touch = event.changedTouches[0];
     const dx = touch.clientX - startX;
     const dy = touch.clientY - startY;
-    if (Math.abs(dy) > 45 && Math.abs(dy) > Math.abs(dx) * 1.2) {
-      event.preventDefault();
+    if (Math.abs(dy) > 40 && Math.abs(dy) > Math.abs(dx) * 1.15) {
       if (dy < 0) await nextShort(); // Swipe up = next Short
       else previousShort();          // Swipe down = previous Short
     }
-  }, { passive: false });
+  }, { passive: true });
 
   // Desktop testing: mouse wheel also advances the feed.
   let wheelLock = false;

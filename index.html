@@ -499,7 +499,7 @@ input:checked + .slider:before { transform: translateX(18px); }
           <div class="channel-logo-img" id="channelAvatarBox">I</div>
           <div class="channel-text-info">
             <h4 id="channelNameTag">IndTube Channel</h4>
-            <p id="channelSubTag">YouTube channel</p>
+            <p id="channelSubTag">Subscribe</p>
           </div>
         </div>
         
@@ -747,7 +747,6 @@ input:checked + .slider:before { transform: translateX(18px); }
     <div class="shorts-actions-bar">
       <button class="short-action-btn" id="shortLikeBtn" onclick="likeShort(this)">♡<span>Like</span></button>
       <button class="short-action-btn" id="shortCommentBtn" onclick="openShortComments()">💬<span>Comment</span></button>
-      <button class="short-action-btn" id="shortRepostBtn" onclick="toggleShortRepost(this)">🔁<span>Repost</span></button>
       <button class="short-action-btn" onclick="shareVideo()">➤<span>Share</span></button>
       <button class="short-action-btn" id="shortSaveBtn" onclick="saveCurrentShort()">▱<span>Save</span></button>
     </div>
@@ -766,9 +765,8 @@ input:checked + .slider:before { transform: translateX(18px); }
     <div id="shortMoreToast" role="status" aria-live="polite"></div>
     <div class="shorts-bottom-info">
       <div class="shorts-creator-row">
-        <div class="shorts-avatar" id="shortsAvatar">I</div>
         <span class="shorts-creator-name" id="shortsCreatorName">IndTube Creator</span>
-        <button class="shorts-follow-btn" id="shortsFollowBtn" onclick="toggleShortFollow(this)">Follow</button>
+        <button class="shorts-follow-btn" id="shortsFollowBtn" onclick="toggleShortSubscribe(this)">Subscribe</button>
       </div>
       <div class="shorts-caption" id="shortsCaption">Loading Short...</div>
       <div class="shorts-audio">♫ Original audio</div>
@@ -1154,6 +1152,19 @@ window.addEventListener('scroll', () => {
   });
 }, { passive: true });
 
+function indTubeTimeAgo(dateValue) {
+  if (!dateValue) return '';
+  const timestamp = new Date(dateValue).getTime();
+  if (!Number.isFinite(timestamp)) return '';
+  const seconds = Math.max(0, Math.floor((Date.now() - timestamp) / 1000));
+  if (seconds < 60) return 'just now';
+  const minutes = Math.floor(seconds / 60); if (minutes < 60) return `${minutes} minute${minutes === 1 ? '' : 's'} ago`;
+  const hours = Math.floor(minutes / 60); if (hours < 24) return `${hours} hour${hours === 1 ? '' : 's'} ago`;
+  const days = Math.floor(hours / 24); if (days < 30) return `${days} day${days === 1 ? '' : 's'} ago`;
+  const months = Math.floor(days / 30); if (months < 12) return `${months} month${months === 1 ? '' : 's'} ago`;
+  const years = Math.floor(days / 365); return `${years} year${years === 1 ? '' : 's'} ago`;
+}
+
 function renderFeedCards(items, targetContainerId, append = false) {
   const container = document.getElementById(targetContainerId);
   if (!container) return;
@@ -1175,7 +1186,7 @@ function renderFeedCards(items, targetContainerId, append = false) {
         <div class="meta-info">
           <h3>${escapeHtml(snippet.title)}</h3>
           <p class="card-meta-line" style="display:flex;flex-wrap:wrap;align-items:center;gap:5px;font-size:12px;color:var(--text-secondary);">
-            <span>${escapeHtml(snippet.channelTitle || 'YouTube')} • ${snippet.publishedAt ? new Date(snippet.publishedAt).toLocaleDateString() : ''}</span>
+            <span>${escapeHtml(snippet.channelTitle || 'YouTube')}</span><span>•</span><span class="card-public-stats" data-video-id="${escapeHtml(videoId)}">Views loading…</span><span>•</span><span>${indTubeTimeAgo(snippet.publishedAt)}</span>
           </p>
         </div>
       </div>`;
@@ -1183,6 +1194,7 @@ function renderFeedCards(items, targetContainerId, append = false) {
   });
   // Avoid extra API requests for each feed batch; card views are optional.
   hydrateChannelAvatars(items);
+  hydrateFeedVideoStats(items);
 }
 
 /* Main playback navigation restored: all video cards route through this function. */
@@ -1268,6 +1280,22 @@ async function hydrateVideoCardStats(items) {
   }
 }
 
+async function hydrateFeedVideoStats(items) {
+  const ids = [...new Set((items || []).map(getVideoId).filter(Boolean))];
+  if (!ids.length) return;
+  try {
+    const data = await youtubeRequest('videos', { part: 'statistics', id: ids.join(',') });
+    (data.items || []).forEach(video => {
+      const count = video.statistics?.viewCount;
+      document.querySelectorAll(`.card-public-stats[data-video-id="${CSS.escape(video.id)}"]`).forEach(el => {
+        el.textContent = count != null ? `${formatCompactCount(count)} views` : 'Views unavailable';
+      });
+    });
+  } catch (_) {
+    document.querySelectorAll('.card-public-stats').forEach(el => { if (el.textContent === 'Views loading…') el.textContent = 'Views unavailable'; });
+  }
+}
+
 function formatCompactCount(value) {
   const n = Number(value);
   if (!Number.isFinite(n) || n < 0) return '—';
@@ -1295,7 +1323,7 @@ async function loadRealVideoStats(videoId, channelId) {
   const subsEl = document.getElementById('watchSubscribersCount');
   const errorEl = document.getElementById('watchStatsError');
   if (errorEl) { errorEl.textContent = ''; errorEl.style.display = 'none'; }
-  if (sub) sub.textContent = 'Subscribers';
+  if (sub) sub.textContent = 'Subscribe';
   if (viewsEl) viewsEl.textContent = 'लोड हो रहे हैं…';
   if (likesEl) likesEl.textContent = 'लोड हो रहे हैं…';
   if (subsEl) subsEl.textContent = 'लोड हो रहे हैं…';
@@ -1313,7 +1341,7 @@ async function loadRealVideoStats(videoId, channelId) {
     const comments = st.commentCount != null ? Number(st.commentCount).toLocaleString('en-IN') : '—';
     const snippet = currentVideoObj?.snippet || {};
     const watchSubtext = document.getElementById('watchVideoSubtext');
-    if (watchSubtext) watchSubtext.innerText = `${snippet.channelTitle || video.snippet?.channelTitle || 'YouTube'} • ${viewsText} views • ${snippet.publishedAt ? new Date(snippet.publishedAt).toLocaleDateString() : ''}`;
+    if (watchSubtext) watchSubtext.innerText = `${snippet.channelTitle || video.snippet?.channelTitle || 'YouTube'} • ${viewsText} views • ${indTubeTimeAgo(video.snippet?.publishedAt || snippet.publishedAt)}`;
     if (viewsEl) viewsEl.textContent = viewsText;
     if (likesEl) likesEl.textContent = likesText;
     if (likes != null) {
@@ -1337,19 +1365,19 @@ async function loadRealVideoStats(videoId, channelId) {
         const channel = channelData.items?.[0];
         const count = channel?.statistics?.subscriberCount;
         const formattedSubs = count != null
-          ? `${formatCompactCount(count)} SUBSCRIBERS`
-          : 'Subscribers unavailable';
+          ? `${formatCompactCount(count)} Subscribe`
+          : 'Subscribe';
         if (subsEl) subsEl.textContent = formattedSubs;
-        if (sub) sub.textContent = formattedSubs;
+        if (sub) sub.textContent = 'Subscribe';
       } catch (subscriberError) {
         if (token !== realStatsRequestToken || currentVideoObj?.id !== videoId) return;
-        if (subsEl) subsEl.textContent = '— SUBSCRIBER\'S';
-        if (sub) sub.textContent = '— SUBSCRIBER\'S';
+        if (subsEl) subsEl.textContent = 'Subscribe';
+        if (sub) sub.textContent = 'Subscribe';
         console.warn('Subscriber count unavailable:', subscriberError);
       }
     } else {
-      if (subsEl) subsEl.textContent = '— SUBSCRIBER\'S';
-      if (sub) sub.textContent = '— SUBSCRIBER\'S';
+      if (subsEl) subsEl.textContent = 'Subscribe';
+      if (sub) sub.textContent = 'Subscribe';
     }
   } catch (e) {
     if (token !== realStatsRequestToken || currentVideoObj?.id !== videoId) return;
@@ -1357,8 +1385,8 @@ async function loadRealVideoStats(videoId, channelId) {
     const message = explainApiError(e);
     if (viewsEl) viewsEl.textContent = 'लोड नहीं हुआ';
     if (likesEl) likesEl.textContent = 'लोड नहीं हुआ';
-    if (subsEl) subsEl.textContent = '— SUBSCRIBER\'S';
-    if (sub) sub.textContent = '— SUBSCRIBER\'S';
+    if (subsEl) subsEl.textContent = 'Subscribe';
+    if (sub) sub.textContent = 'Subscribe';
     if (like && like.textContent === '…') like.textContent = '—';
     showWatchStatsError('वीडियो आँकड़े अभी उपलब्ध नहीं हैं। बाद में फिर कोशिश करें।');
   }
@@ -1611,7 +1639,7 @@ function playLocalVideo(video) {
   if (localViews) localViews.textContent = 'स्थानीय वीडियो';
   if (localLikes) localLikes.textContent = 'उपलब्ध नहीं';
   if (localSubs) localSubs.textContent = 'उपलब्ध नहीं';
-  if (localSubTag) localSubTag.textContent = 'IndTube local upload';
+  if (localSubTag) localSubTag.textContent = 'Subscribe';
   if (localLikeButton) localLikeButton.textContent = '—';
   if (localStatsError) { localStatsError.textContent = 'यह डिवाइस पर अपलोड की गई स्थानीय फ़ाइल है; YouTube views/likes/subscribers इसके लिए उपलब्ध नहीं हैं।'; localStatsError.style.display = 'block'; }
   const shortsShelf = document.getElementById('shortsShelfSection');
@@ -2443,7 +2471,7 @@ function likeShort(button) {
 }
 function focusShortComment() { openShortComments(); }
 function toggleShortRepost(button) { button.classList.toggle('active'); button.style.color = button.classList.contains('active') ? '#ff9933' : '#fff'; }
-function toggleShortFollow(button) { button.textContent = button.textContent === 'Follow' ? 'Following' : 'Follow'; }
+function toggleShortSubscribe(button) { button.textContent = button.textContent === 'Subscribe' ? 'Subscribed' : 'Subscribe'; }
 function saveCurrentShort() {
   const item = shortsList[shortsIndex]; if (!item) return;
   const id = getVideoId(item);
@@ -2472,7 +2500,9 @@ function showCurrentShort() {
   creatorEl.style.cursor = creatorId ? 'pointer' : 'default';
   creatorEl.title = creatorId ? 'Open creator channel' : creatorName;
   creatorEl.onclick = () => { if (creatorId) openCreatorChannelInIndTube(creatorId, creatorName); };
-  // Load the channel's actual YouTube profile image; use a branded initial if unavailable.
+  // Keep exactly one creator avatar in the Shorts creator row (avoid duplicate app/channel logos).
+  const creatorRow = creatorEl.parentElement;
+  creatorRow.querySelectorAll('.shorts-avatar, .shorts-creator-avatar, [data-short-avatar]').forEach(node => { if (node.id !== 'shortsCreatorAvatar') node.remove(); });
   let avatar = document.getElementById('shortsCreatorAvatar');
   if (!avatar) {
     avatar = document.createElement('button');
@@ -2480,7 +2510,9 @@ function showCurrentShort() {
     avatar.type = 'button';
     avatar.setAttribute('aria-label', 'Open creator channel');
     avatar.style.cssText = 'width:38px;height:38px;border:0;border-radius:50%;overflow:hidden;padding:0;background:#ff6a00;color:#fff;font-weight:700;display:grid;place-items:center;flex-shrink:0;cursor:pointer;';
-    creatorEl.parentElement.insertBefore(avatar, creatorEl);
+    creatorRow.insertBefore(avatar, creatorEl);
+  } else if (avatar.parentElement !== creatorRow) {
+    creatorRow.insertBefore(avatar, creatorEl);
   }
   avatar.textContent = creatorName.slice(0,1).toUpperCase();
   avatar.onclick = () => { if (creatorId) openCreatorChannelInIndTube(creatorId, creatorName); };
@@ -2488,7 +2520,7 @@ function showCurrentShort() {
     fetch(`${BASE_URL}/channels?part=snippet&id=${encodeURIComponent(creatorId)}&key=${encodeURIComponent(API_KEY)}`)
       .then(r => r.ok ? r.json() : null)
       .then(data => {
-        const url = data?.items?.[0]?.snippet?.thumbnails?.default?.url || data?.items?.[0]?.snippet?.thumbnails?.medium?.url;
+        const url = data?.items?.[0]?.snippet?.thumbnails?.medium?.url || data?.items?.[0]?.snippet?.thumbnails?.default?.url;
         if (url && avatar.isConnected) avatar.innerHTML = `<img src="${escapeHtml(url)}" alt="" style="width:100%;height:100%;object-fit:cover">`;
       }).catch(() => {});
   }

@@ -1,6 +1,9 @@
 <!DOCTYPE html>
 <html lang="hi">
 <head>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
 <meta charset="UTF-8">
   <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -594,42 +597,27 @@ input:checked + .slider:before { transform: translateX(18px); }
 
 <!-- View 4: YOU / Account & Comprehensive Settings -->
 <section class="view-section" id="youSection">
-  <div class="profile-section">
-    <div class="user-card">
-      <div class="user-avatar-lg" id="userAvatar">U</div>
-      <div class="user-details">
-        <h3 id="userName">User Account</h3>
-        <p id="userStatus">Not Logged In</p>
+  <div class="profile-section" id="youtubeStyleYou">
+    <div class="you-channel-summary">
+      <div class="you-identity">
+        <div class="user-avatar-lg" id="userAvatar" role="button" tabindex="0" title="Change profile logo" onclick="document.getElementById('avatarPicker').click()">U</div>
+        <div class="user-details"><h3 id="userName">User Account</h3><p id="userStatus">Not Logged In</p><button class="you-text-link" onclick="openMyChannel()">View channel ›</button></div>
       </div>
+      <div id="authBtnContainer"><button class="google-login-btn" onclick="handleGoogleLogin()"><span style="font-size:20px;font-weight:bold;color:#4285F4">G</span> Sign in with Gmail</button></div>
     </div>
-
-    <div id="authBtnContainer">
-      <button class="google-login-btn" onclick="handleGoogleLogin()">
-        <svg class="google-icon" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/></svg>
-        Sign in with Gmail
-      </button>
+    <div class="you-section-title"><b>History</b><button onclick="switchTab('watchLater')">View all ›</button></div>
+    <div class="you-history-row" id="youHistoryPreview"><div class="you-empty-thumb">◷</div><span>Recently watched videos will appear here</span></div>
+    <div class="you-section-title"><b>Playlists</b><button onclick="switchTab('watchLater')">View all ›</button></div>
+    <div class="you-library-grid">
+      <div class="you-library-item" onclick="switchTab('watchLater')"><div class="you-library-icon">◷</div><b>Watch later</b><small>Private</small></div>
+      <div class="you-library-item" onclick="switchTab('watchLater')"><div class="you-library-icon">♥</div><b>Liked videos</b><small>Private</small></div>
+      <div class="you-library-item" onclick="openMyUploads()"><div class="you-library-icon">▣</div><b>Your videos</b><small>Uploads</small></div>
     </div>
-
-    <div class="action-list">
-      <div class="list-item" onclick="openMyUploads()">
-        <div class="list-item-left"><span>🎞️</span><span>My IndTube Uploads</span></div><span>❯</span>
-      </div>
-      <div class="list-item" onclick="openModal('createChannelModal')">
-        <div class="list-item-left">
-          <span>📺</span>
-          <span>Create Channel</span>
-        </div>
-        <span>❯</span>
-      </div>
-      <div class="list-item" onclick="switchTab('watchLater')">
-        <div class="list-item-left">
-          <span>⏰</span>
-          <span>Your Saved Videos</span>
-        </div>
-        <span>❯</span>
-      </div>
+    <div class="you-menu-list">
+      <div class="list-item" onclick="openMyUploads()"><div class="list-item-left"><span>🎞️</span><span>My Video Upload's</span></div><span>❯</span></div>
+      <div class="list-item" onclick="openMyChannel()"><div class="list-item-left"><span>📺</span><span>Your channel</span></div><span>❯</span></div>
+      <div class="list-item" onclick="openEditChannel()"><div class="list-item-left"><span>✏️</span><span>Edit channel</span></div><span>❯</span></div>
     </div>
-
     <h3 style="margin-bottom: 12px; font-size: 16px;">⚙️ App Settings</h3>
     <div class="settings-panel">
       <div class="setting-group">
@@ -683,12 +671,31 @@ input:checked + .slider:before { transform: translateX(18px); }
         </div>
       </div>
     </div>
-    <div id="myUploadsPanel" style="padding:14px;">
-      <h3 style="margin:8px 0 12px;">🎬 My Uploaded Videos</h3>
-      <div id="myUploadsList" class="feed-container" style="padding:0;"><p style="color:var(--text-secondary)">Your uploads will appear here.</p></div>
-    </div>
+
   </div>
 </section>
+
+<div id="myVideosPage" class="indtube-fullpage" style="display:none"><div class="indtube-page-head"><button onclick="closeMyVideosPage()">‹</button><strong>My Video Upload's</strong></div><div style="padding:16px"><div id="myUploadsList" class="feed-container" style="padding:0"></div></div></div>
+<div id="videoUploadPage" class="indtube-fullpage" style="display:none"><div class="indtube-page-head"><button onclick="closeVideoUploadPage()">‹</button><strong>Create video</strong><button onclick="closeVideoUploadPage()">✕</button></div><div style="padding:16px"><button class="btn-primary" onclick="document.getElementById('filePicker').click()">＋ Select video</button><p id="selectedVideoName" style="color:var(--text-secondary);margin:10px 0">No video selected</p><label>Title</label><input id="uploadTitleInput" type="text" maxlength="120" placeholder="Add a title" style="width:100%;padding:14px;border-radius:10px;background:var(--surface);color:var(--text);border:1px solid #444"><label>Description</label><textarea id="uploadDescriptionInput" rows="5" placeholder="Tell viewers about your video" style="width:100%;padding:14px;border-radius:10px;background:var(--surface);color:var(--text);border:1px solid #444"></textarea><p id="uploadProgressText"></p><button id="publishVideoButton" class="btn-primary" onclick="publishSelectedVideo()">Upload video</button></div></div>
+<style>.indtube-fullpage{position:fixed;inset:0;z-index:10050;background:var(--bg);color:var(--text);overflow:auto;padding-bottom:30px}.indtube-page-head{position:sticky;top:0;display:flex;align-items:center;gap:16px;padding:14px;background:var(--surface);border-bottom:1px solid #333;z-index:2}.indtube-page-head button{background:transparent;color:inherit;border:0;font-size:25px}.indtube-page-head strong{font-size:18px;flex:1}#userAvatar{cursor:pointer;overflow:hidden}#userAvatar img{width:100%;height:100%;object-fit:cover;border-radius:50%}</style>
+<input type="file" id="avatarPicker" accept="image/*" style="display:none" onchange="handleAvatarPicked(event)"><input type="file" id="bannerPicker" accept="image/*" style="display:none" onchange="handleBannerPicked(event)">
+<div id="myChannelPage" class="indtube-fullpage youtube-like-page" style="display:none">
+ <div class="yt-topbar"><button onclick="closeChannelPage()">‹</button><b>Channel</b><span></span></div>
+ <div class="yt-banner" id="channelBanner" onclick="document.getElementById('bannerPicker').click()"><span>＋ Add channel banner</span></div>
+ <div class="yt-channel-head"><div class="yt-channel-avatar" id="channelAvatar">U</div><div><h2 id="channelDisplayName">Your channel</h2><p id="channelHandle">@yourhandle · 0 subscribers · 0 videos</p><p id="channelDescription"></p></div></div>
+ <div class="yt-channel-actions"><button onclick="openEditChannel()">✎ Edit Channel</button><button id="myChannelSubscribeBtn" class="subscribe-btn" onclick="toggleMyChannelSubscription()">Subscribe</button></div>
+ <div class="yt-tabs"><button class="active" onclick="setChannelTab('Videos',this)">Videos</button><button onclick="setChannelTab('Shorts',this)">Shorts</button><button onclick="setChannelTab('Posts',this)">Posts</button></div>
+ <div id="channelTabContent" class="yt-channel-content"><p>Your uploaded videos will appear here.</p></div>
+</div>
+<div id="editChannelPage" class="indtube-fullpage youtube-like-page" style="display:none">
+ <div class="yt-topbar"><button onclick="closeEditChannel()">‹</button><b>Edit channel</b><button onclick="saveChannelDetails()">Save</button></div>
+ <div class="yt-edit-banner" onclick="document.getElementById('bannerPicker').click()"><img id="editBannerPreview" alt=""><span>✎ Change banner</span></div>
+ <div class="yt-edit-avatar-row"><div class="yt-channel-avatar" id="editChannelAvatar">U</div><button onclick="document.getElementById('avatarPicker').click()">Change picture</button></div>
+ <label> Name </label><input id="channelNameInput" placeholder="Channel name" maxlength="60">
+ <label> Handle </label><input id="channelHandleInput" placeholder="@handle" maxlength="30">
+ <label> Description </label><textarea id="channelDescriptionInput" rows="5" placeholder="Tell viewers about your channel"></textarea>
+ <p class="yt-edit-note">Your changes will be saved on this device.</p>
+</div>
 
 <!-- Bottom Sheet Popup for Upload Options -->
 <div class="bottom-sheet-overlay" id="uploadSheet">
@@ -730,8 +737,8 @@ input:checked + .slider:before { transform: translateX(18px); }
     <button class="close-modal-btn" onclick="closeModal('createChannelModal')">✕</button>
     <h2>📺 Create Your Channel</h2>
     <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px;">Set up your IndTube channel name and handle.</p>
-    <input type="text" id="channelNameInput" placeholder="Channel Name (e.g. My Vlogs)">
-    <input type="text" id="channelHandleInput" placeholder="Handle (e.g. @myvlogs)">
+    <input type="text" id="createChannelNameInput" placeholder="Channel Name (e.g. My Vlogs)">
+    <input type="text" id="createChannelHandleInput" placeholder="Handle (e.g. @myvlogs)">
     <button class="btn-primary" onclick="handleCreateChannel()">Create Channel</button>
   </div>
 </div>
@@ -819,6 +826,10 @@ input:checked + .slider:before { transform: translateX(18px); }
 </nav>
 
 <script>
+// IndTube Supabase connection (publishable key; access is controlled by RLS).
+const IND_SUPABASE_URL = 'https://oriimkwtfqcnxvcysdvo.supabase.co';
+const IND_SUPABASE_KEY = 'sb_publishable_1EJnajyF1KjrjuTNRih3Vw_95lCCxBA';
+const indSupabase = window.supabase.createClient(IND_SUPABASE_URL, IND_SUPABASE_KEY);
 // Public browser-side YouTube Data API key. Restrict this key to your HTTPS site in Google Cloud Console.
 let API_KEY = (() => {
   try { return localStorage.getItem('indtube_youtube_api_key') || 'AIzaSyBCJU4NJKsId4F_klYM5aWBO5ZVR9WF9nA'; }
@@ -865,6 +876,9 @@ let userSettings = safeLoad('indtube_settings', {
   darkTheme: true, dataSaver: false, pushNotifications: true,
   digest: true, privateSubscriptions: true
 });
+// IndTube is intentionally kept in dark mode.
+userSettings.darkTheme = true;
+persist('indtube_settings', userSettings);
 let observer = null;
 let searchDebounceTimer = null;
 let suggestionAbortController = null;
@@ -1564,6 +1578,7 @@ function openUploadSheet() { document.getElementById('uploadSheet').classList.ad
 function closeSheet() { document.getElementById('uploadSheet').classList.remove('active'); }
 function triggerUpload(type) {
   selectedUploadType = type; closeSheet();
+  if (type !== 'Live Stream') { openVideoUploadPage(); return; }
   if (type === 'Live Stream') {
     alert('Live streaming ke liye YouTube Live API, OAuth permission aur server-side setup zaroori hai.');
     return;
@@ -1607,41 +1622,95 @@ async function deleteLocalVideo(id) {
   });
   db.close(); renderMyUploads();
 }
-async function handleFileSelected(e) {
-  const file = e.target.files?.[0];
-  if (!file) return;
-  try {
-    if (!file.type.startsWith('video/')) throw new Error('Please select a video file.');
-    if (file.size > 100 * 1024 * 1024) throw new Error('Abhi local upload ki limit 100 MB hai.');
-    const title = prompt('Video ka title likhein:', file.name.replace(/\.[^.]+$/, ''));
-    if (title === null || !title.trim()) return;
-    const description = prompt('Video description (optional):', '') || '';
-    const record = { id: 'local_' + Date.now() + '_' + Math.random().toString(36).slice(2,8), title: title.trim(), description, type: selectedUploadType || 'Long Video', file, mimeType: file.type, size: file.size, createdAt: Date.now() };
-    await saveLocalVideo(record);
-    alert('Video is device par IndTube mein save ho gaya. My IndTube Uploads mein dekh sakte hain.');
-    await renderMyUploads();
-  } catch (err) { alert('Upload save nahi hua: ' + (err.message || 'Storage error')); }
-  finally { e.target.value = ''; }
+async function getIndTubeSession() {
+  const { data: { session }, error } = await indSupabase.auth.getSession();
+  if (error) throw error;
+  if (session) return session;
+
+  const email = prompt('IndTube account ke liye apna email address likhein:');
+  if (!email) return null;
+  const password = prompt('Password likhein (kam se kam 6 characters):');
+  if (!password) return null;
+
+  let result = await indSupabase.auth.signInWithPassword({ email: email.trim(), password });
+  if (result.error) {
+    const create = confirm('Login nahi hua. Kya isi email se naya IndTube account banana hai?');
+    if (!create) throw result.error;
+    result = await indSupabase.auth.signUp({ email: email.trim(), password });
+    if (result.error) throw result.error;
+    if (!result.data.session) {
+      alert('Account request ban gayi. Email par confirmation link aaye to confirm karke phir upload karein.');
+      return null;
+    }
+  }
+  return result.data.session;
 }
+
+let selectedVideoFile = null;
+function openVideoUploadPage(){document.getElementById('videoUploadPage').style.display='block';selectedVideoFile=null;document.getElementById('selectedVideoName').textContent='No video selected';document.getElementById('uploadTitleInput').value='';document.getElementById('uploadDescriptionInput').value='';document.getElementById('uploadProgressText').textContent='';}
+function closeVideoUploadPage(){document.getElementById('videoUploadPage').style.display='none';}
+function handleFileSelected(e){const file=e.target.files?.[0];if(!file)return;if(!file.type.startsWith('video/')){alert('Video file select karein.');e.target.value='';return;}if(file.size>100*1024*1024){alert('Abhi upload ki limit 100 MB hai.');e.target.value='';return;}selectedVideoFile=file;document.getElementById('selectedVideoName').textContent=file.name;const t=document.getElementById('uploadTitleInput');if(!t.value)t.value=file.name.replace(/\.[^.]+$/,'');}
+async function publishSelectedVideo(){const file=selectedVideoFile,title=document.getElementById('uploadTitleInput').value.trim(),description=document.getElementById('uploadDescriptionInput').value.trim(),status=document.getElementById('uploadProgressText'),button=document.getElementById('publishVideoButton');if(!file){alert('Pehle video select karein.');return;}if(!title){alert('Video ka title likhein.');return;}button.disabled=true;status.textContent='Account check ho raha hai...';try{const session=await getIndTubeSession();if(!session)return;const safeName=file.name.replace(/[^a-zA-Z0-9._-]/g,'_').slice(-100)||'video.mp4',objectPath=`${session.user.id}/${Date.now()}_${safeName}`;status.textContent='Video upload ho raha hai...';const {error:uploadError}=await indSupabase.storage.from('videos').upload(objectPath,file,{cacheControl:'3600',upsert:false,contentType:file.type});if(uploadError)throw uploadError;const {data:publicData}=indSupabase.storage.from('videos').getPublicUrl(objectPath);const {error:insertError}=await indSupabase.from('videos').insert({user_id:session.user.id,title,description,video_url:publicData.publicUrl,thumbnail_url:'',video_type:selectedUploadType||'Long Video',status:'published'});if(insertError){await indSupabase.storage.from('videos').remove([objectPath]);throw insertError;}status.textContent='Upload complete';alert('Video IndTube par upload ho gaya!');closeVideoUploadPage();await renderMyUploads();}catch(err){status.textContent='Upload failed';alert('Upload nahi ho paya: '+(err.message||'Supabase error'));}finally{button.disabled=false;}}
+function openMyUploads(){document.getElementById('myVideosPage').style.display='block';renderMyUploads();}
+function closeMyVideosPage(){document.getElementById('myVideosPage').style.display='none';}
+function handleAvatarPicked(e){const file=e.target.files?.[0];if(!file)return;if(!file.type.startsWith('image/')){alert('Image select karein.');return;}if(file.size>2*1024*1024){alert('Logo 2 MB se chhota hona chahiye.');return;}const r=new FileReader();r.onload=()=>{try{localStorage.setItem('indtube_profile_logo',r.result);renderProfileLogo();}catch(_){alert('Image save nahi ho payi. Chhoti image try karein.');}};r.readAsDataURL(file);e.target.value='';}
+function renderProfileLogo(){const a=document.getElementById('userAvatar');if(!a)return;const saved=localStorage.getItem('indtube_profile_logo');if(saved)a.innerHTML='<img alt="Profile logo" src="'+saved+'">';}
+document.addEventListener('DOMContentLoaded',renderProfileLogo);
 async function renderMyUploads() {
   const box = document.getElementById('myUploadsList'); if (!box) return;
   try {
-    const videos = await getLocalVideos();
-    if (!videos.length) { box.innerHTML = '<p style="color:var(--text-secondary)">Abhi koi upload nahi hai.</p>'; return; }
+    const { data: { session } } = await indSupabase.auth.getSession();
+    const { data: remoteVideos, error } = await indSupabase
+      .from('videos').select('id,title,description,video_url,video_type,created_at')
+      .eq('status', 'published')
+      .eq('user_id', session?.user?.id || '00000000-0000-0000-0000-000000000000')
+      .order('created_at', { ascending: false }).limit(100);
+    if (error) throw error;
+    const localVideos = await getLocalVideos().catch(() => []);
     box.innerHTML = '';
-    videos.forEach(v => {
-      const card = document.createElement('div'); card.className = 'video-card';
-      const date = new Date(v.createdAt).toLocaleDateString();
-      card.innerHTML = `<div class="video-details"><div class="channel-avatar">▶</div><div class="meta-info"><h3></h3><p></p></div><button class="action-pill" type="button">🗑️ Delete</button></div>`;
-      card.querySelector('h3').textContent = v.title;
-      card.querySelector('p').textContent = `${v.type} • ${(v.size/1024/1024).toFixed(1)} MB • ${date}`;
-      card.querySelector('button').onclick = (ev) => { ev.stopPropagation(); deleteLocalVideo(v.id); };
-      card.querySelector('.meta-info').onclick = () => playLocalVideo(v);
-      box.appendChild(card);
-    });
-  } catch (err) { box.innerHTML = '<p>Local video storage is not available in this browser.</p>'; }
+    if ((!remoteVideos || !remoteVideos.length) && !localVideos.length) {
+      box.innerHTML = '<p style="color:var(--text-secondary)">Abhi koi upload nahi hai.</p>';
+      return;
+    }
+    if (remoteVideos && remoteVideos.length) {
+      remoteVideos.forEach(v => {
+        const card = document.createElement('div'); card.className = 'video-card';
+        const date = v.created_at ? new Date(v.created_at).toLocaleDateString() : '';
+        card.innerHTML = `<div class="video-details"><div class="channel-avatar">▶</div><div class="meta-info"><h3></h3><p></p></div><button class="action-pill" type="button">▶ Play</button></div>`;
+        card.querySelector('h3').textContent = v.title || 'Untitled video';
+        card.querySelector('p').textContent = `${v.video_type || 'Video'} • IndTube • ${date}`;
+        card.querySelector('button').onclick = () => {
+          const player = document.createElement('video');
+          player.controls = true; player.playsInline = true; player.src = v.video_url;
+          player.style.cssText = 'width:100%;max-height:65vh;background:#000;margin-top:10px;border-radius:10px;';
+          const old = card.querySelector('video'); if (old) old.remove();
+          card.appendChild(player); player.play().catch(() => {});
+        };
+        box.appendChild(card);
+      });
+    }
+    if (localVideos.length) {
+      const heading = document.createElement('p');
+      heading.textContent = 'This device only (old local uploads)';
+      heading.style.color = 'var(--text-secondary)';
+      box.appendChild(heading);
+      localVideos.forEach(v => {
+        const card = document.createElement('div'); card.className = 'video-card';
+        card.innerHTML = `<div class="video-details"><div class="channel-avatar">▶</div><div class="meta-info"><h3></h3><p></p></div><button class="action-pill" type="button">🗑️ Delete</button></div>`;
+        card.querySelector('h3').textContent = v.title;
+        card.querySelector('p').textContent = `${v.type} • ${(v.size/1024/1024).toFixed(1)} MB`;
+        card.querySelector('button').onclick = (ev) => { ev.stopPropagation(); deleteLocalVideo(v.id); };
+        card.querySelector('.meta-info').onclick = () => playLocalVideo(v);
+        box.appendChild(card);
+      });
+    }
+  } catch (err) {
+    box.innerHTML = '<p style="color:var(--text-secondary)">Uploads load nahi hue: ' +
+      String(err.message || err).replace(/[<>&"]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c])) +
+      '</p>';
+  }
 }
-function openMyUploads() { renderMyUploads(); document.getElementById('myUploadsPanel')?.scrollIntoView({behavior:'smooth'}); }
+
 function playLocalVideo(video) {
   try { history.pushState({ indtubeView: 'watch', indtubeWatch: true, from: history.state?.indtubeView || 'settings' }, '', '#watch'); } catch (_) {}
   currentVideoObj = { id: video.id, snippet: { title: video.title, channelTitle: 'IndTube Creator', description: video.description || '' } };
@@ -2228,9 +2297,9 @@ function openNotifications() {
 }
 
 function handleCreateChannel() {
-  const name = document.getElementById('channelNameInput').value.trim();
+  const name = document.getElementById('createChannelNameInput').value.trim();
   if (!name) return;
-  persist('indtube_channel', { name });
+  persist('indtube_channel', { name, handle: document.getElementById('createChannelHandleInput').value.trim() });
   closeModal('createChannelModal');
   alert(`Channel profile "${name}" created.`);
 }
@@ -2240,7 +2309,8 @@ function bindSettings() {
     const key = input.dataset.setting;
     input.checked = !!userSettings[key];
     input.addEventListener('change', async () => {
-      userSettings[key] = input.checked;
+      userSettings[key] = key === 'darkTheme' ? true : input.checked;
+      if (key === 'darkTheme') input.checked = true;
       persist('indtube_settings', userSettings);
       applySettingsToUI();
       if (key === 'pushNotifications' && input.checked && 'Notification' in window && Notification.permission === 'default') {
@@ -2250,12 +2320,19 @@ function bindSettings() {
   });
 }
 function applySettingsToUI() {
-  document.body.classList.toggle('light-theme', !userSettings.darkTheme);
+  document.body.classList.remove('light-theme');
+  userSettings.darkTheme = true;
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content', userSettings.darkTheme ? '#0f0f0f' : '#f5f5f5');
   document.querySelectorAll('[data-setting]').forEach(input => input.checked = !!userSettings[input.dataset.setting]);
 }
 function updateUserUI() {}
-function handleGoogleLogin() { alert('Google Login UI enabled.'); }
+async function handleGoogleLogin() {
+  const { error } = await indSupabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: window.location.href.split('#')[0], queryParams: { prompt: 'select_account' } }
+  });
+  if (error) alert('Google sign-in error: ' + error.message + '. Supabase Authentication > Providers me Google enable karke Google OAuth credentials add karein.');
+}
 
 function isShortFiltered(item) {
   const id = getVideoId(item);
@@ -2626,6 +2703,84 @@ function closeShorts() {
   document.getElementById('shortsIframeContainer').innerHTML = '';
   switchTab('home');
 }
+</script>
+
+<style>
+#youtubeStyleYou{padding:12px 14px 18px}
+.you-channel-summary{padding:8px 2px 18px;border-bottom:1px solid var(--border-color,#333)}
+.you-identity{display:flex;align-items:center;gap:14px;margin-bottom:15px}
+.you-identity .user-avatar-lg{flex:none}
+.you-identity .user-details h3{margin:0 0 4px;font-size:19px}
+.you-identity .user-details p{margin:0;color:var(--text-secondary);font-size:13px}
+.you-text-link{padding:5px 0;border:0;background:none;color:var(--accent,#ff9d32);font-weight:600}
+#authBtnContainer .google-login-btn{width:100%;border-radius:24px;margin:0}
+.you-section-title{display:flex;justify-content:space-between;align-items:center;margin:18px 0 10px}
+.you-section-title button{border:0;background:none;color:var(--accent,#ff9d32)}
+.you-history-row{display:flex;gap:12px;align-items:center;overflow:auto;color:var(--text-secondary);font-size:13px}
+.you-empty-thumb{width:130px;height:76px;flex:none;border-radius:8px;background:var(--surface);display:grid;place-items:center;font-size:30px}
+.you-library-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.you-library-item{min-width:0;display:flex;flex-direction:column;gap:4px;font-size:13px}
+.you-library-icon{height:76px;border-radius:9px;background:var(--surface);display:grid;place-items:center;font-size:27px}
+.you-library-item small{color:var(--text-secondary)}
+.you-menu-list{margin-top:18px}
+.youtube-like-page{background:#0f0f0f!important;color:#fff!important;font-family:Arial,sans-serif}
+.yt-topbar{height:52px;display:flex;align-items:center;gap:18px;padding:0 14px;border-bottom:1px solid #333;position:sticky;top:0;background:#181818;color:#fff;z-index:3}
+.yt-topbar button{border:0;background:none;font-size:25px;color:#fff}.yt-topbar b{font-size:17px;flex:1}.yt-topbar span{width:20px}
+.yt-banner{height:118px;background:#242424 center/cover no-repeat;display:flex;align-items:center;justify-content:center;color:#ddd;cursor:pointer}
+.yt-banner span,.yt-edit-banner span{background:#222d;padding:7px 12px;border-radius:20px;font-size:12px;color:#fff}
+.yt-channel-head{display:flex;gap:14px;padding:16px;align-items:flex-start}
+.yt-channel-avatar{width:68px;height:68px;border-radius:50%;background:#333;display:grid;place-items:center;overflow:hidden;flex:none;font-size:25px;color:#fff}
+.yt-channel-avatar img{width:100%;height:100%;object-fit:cover}
+.yt-channel-head h2{font-size:19px;margin:2px 0 5px}.yt-channel-head p{font-size:12px;color:#aaa;margin:4px 0}
+.yt-channel-actions{display:flex;gap:9px;padding:0 16px 14px}.yt-channel-actions button,.yt-edit-avatar-row button{border:0;border-radius:22px;background:#303030;color:#fff;padding:10px 15px;font-weight:600}
+.yt-channel-actions .subscribe-btn{background:#fff;color:#111}
+.yt-tabs{display:flex;border-bottom:1px solid #333}.yt-tabs button{flex:1;background:none;border:0;padding:13px 4px;font-weight:600;color:#aaa}.yt-tabs button.active{color:#fff;border-bottom:2px solid #fff}
+.yt-channel-content{padding:18px 14px;color:#bbb;font-size:14px}
+#editChannelPage{padding-bottom:30px}
+.yt-edit-banner{height:125px;background:#242424;position:relative;display:grid;place-items:center;cursor:pointer}
+.yt-edit-banner img{width:100%;height:100%;object-fit:cover;position:absolute;inset:0}
+.yt-edit-banner span{position:relative}
+.yt-edit-avatar-row{display:flex;align-items:center;gap:14px;padding:18px 16px}
+#editChannelPage label{display:block;font-size:13px;color:#bbb;margin:16px 16px 6px}
+#editChannelPage input,#editChannelPage textarea{display:block;width:calc(100% - 32px);margin:0 16px;padding:12px;border:1px solid #444;border-radius:8px;background:#202020;color:#fff;font:inherit}
+.yt-edit-note{font-size:12px;color:#aaa;padding:12px 16px}
+</style>
+<script>
+function channelData(){try{return JSON.parse(localStorage.getItem('indtube_channel_data')||'{}')}catch(e){return {}}}
+function saveChannelData(d){localStorage.setItem('indtube_channel_data',JSON.stringify(d))}
+function openMyChannel(){const d=channelData();document.getElementById('myChannelPage').style.display='block';document.getElementById('channelDisplayName').textContent=d.name||document.getElementById('userName')?.textContent||'Your channel';document.getElementById('channelHandle').textContent=(d.handle||'@yourhandle')+' · 0 subscribers · 0 videos';document.getElementById('channelDescription').textContent=d.description||'';const banner=localStorage.getItem('indtube_channel_banner');document.getElementById('channelBanner').style.backgroundImage=banner?'url('+banner+')':'';renderChannelAvatar();updateMyChannelSubscribeUI();loadChannelVideos('Videos')}
+function closeChannelPage(){document.getElementById('myChannelPage').style.display='none'}
+function toggleMyChannelSubscription(){
+  const key='indtube_my_channel_subscribed';
+  const subscribed=localStorage.getItem(key)==='true';
+  const next=!subscribed;
+  localStorage.setItem(key,String(next));
+  const countKey='indtube_my_channel_subscriber_count';
+  let count=Math.max(0,Number(localStorage.getItem(countKey)||0));
+  count=Math.max(0,count+(next?1:-1));
+  localStorage.setItem(countKey,String(count));
+  updateMyChannelSubscribeUI();
+}
+function updateMyChannelSubscribeUI(){
+  const subscribed=localStorage.getItem('indtube_my_channel_subscribed')==='true';
+  const btn=document.getElementById('myChannelSubscribeBtn');
+  if(btn){btn.textContent=subscribed?'Subscribed':'Subscribe';btn.classList.toggle('subscribed',subscribed)}
+  const handle=document.getElementById('channelHandle');
+  if(handle){
+    const d=channelData();
+    const count=Math.max(0,Number(localStorage.getItem('indtube_my_channel_subscriber_count')||0));
+    handle.textContent=(d.handle||'@yourhandle')+' · '+count+' subscribers · 0 videos';
+  }
+}
+function openEditChannel(){const d=channelData();document.getElementById('editChannelPage').style.display='block';document.getElementById('channelNameInput').value=d.name||document.getElementById('userName')?.textContent||'';document.getElementById('channelHandleInput').value=d.handle||'';document.getElementById('channelDescriptionInput').value=d.description||'';const b=localStorage.getItem('indtube_channel_banner')||'';document.getElementById('editBannerPreview').src=b;renderChannelAvatar()}
+function closeEditChannel(){document.getElementById('editChannelPage').style.display='none'}
+function saveChannelDetails(){const d={name:document.getElementById('channelNameInput').value.trim()||'My Channel',handle:document.getElementById('channelHandleInput').value.trim().replace(/^@?/,'@'),description:document.getElementById('channelDescriptionInput').value.trim()};saveChannelData(d);document.getElementById('userName').textContent=d.name;closeEditChannel();openMyChannel()}
+function setChannelTab(tab,btn){document.querySelectorAll('.yt-tabs button').forEach(x=>x.classList.remove('active'));btn.classList.add('active');loadChannelVideos(tab)}
+async function loadChannelVideos(tab){const box=document.getElementById('channelTabContent');if(tab!=='Videos'){box.textContent=tab+' will appear here when you publish '+tab.toLowerCase()+'.';return}box.textContent='Loading videos...';try{const {data:{session}}=await indSupabase.auth.getSession();if(!session){box.textContent='Sign in to see your channel videos.';return}const {data,error}=await indSupabase.from('videos').select('title,video_url,created_at').eq('user_id',session.user.id).eq('status','published').order('created_at',{ascending:false});if(error)throw error;if(!data?.length){box.textContent='No videos uploaded yet.';return}box.innerHTML='';data.forEach(v=>{const item=document.createElement('div');item.style.cssText='padding:12px 0;border-bottom:1px solid #eee;color:#111';const t=document.createElement('b');t.textContent=v.title;const play=document.createElement('video');play.src=v.video_url;play.controls=true;play.playsInline=true;play.style.cssText='width:100%;max-height:220px;background:#000;display:block;margin-bottom:8px;border-radius:8px';item.append(play,t);box.append(item)})}catch(e){box.textContent='Videos load nahi ho paye: '+e.message}}
+function renderChannelAvatar(){const saved=localStorage.getItem('indtube_profile_logo');['channelAvatar','editChannelAvatar'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=saved?'<img src="'+saved+'" alt="Channel picture">':'U'})}
+function handleBannerPicked(e){const f=e.target.files?.[0];if(!f)return;if(!f.type.startsWith('image/')){alert('Image select karein');return}if(f.size>3*1024*1024){alert('Banner 3 MB se chhota rakhein');return}const r=new FileReader();r.onload=()=>{localStorage.setItem('indtube_channel_banner',r.result);document.getElementById('editBannerPreview').src=r.result;document.getElementById('channelBanner').style.backgroundImage='url('+r.result+')'};r.readAsDataURL(f);e.target.value=''}
+const oldRenderProfileLogo=renderProfileLogo;renderProfileLogo=function(){oldRenderProfileLogo();renderChannelAvatar()}
+document.addEventListener('DOMContentLoaded',()=>{const d=channelData();if(d.name)document.getElementById('userName').textContent=d.name;const oldName=document.getElementById('userName').textContent;document.getElementById('channelDisplayName').textContent=oldName;renderChannelAvatar()});
 </script>
 </body>
 </html>

@@ -2801,6 +2801,225 @@ function closeShorts() {
 #editChannelPage label{display:block;font-size:13px;color:#bbb;margin:16px 16px 6px}
 #editChannelPage input,#editChannelPage textarea{display:block;width:calc(100% - 32px);margin:0 16px;padding:12px;border:1px solid #444;border-radius:8px;background:#202020;color:#fff;font:inherit}
 .yt-edit-note{font-size:12px;color:#aaa;padding:12px 16px}
+
+
+/* =========================================================
+   IND TUBE — GLASSMORPHISM / FROSTED GLASS THEME
+   Visual-only overrides: existing layout and JavaScript stay intact.
+   ========================================================= */
+:root {
+  --bg: #080b18;
+  --surface: rgba(20, 25, 48, .62);
+  --surface-hover: rgba(43, 49, 86, .72);
+  --border: rgba(190, 198, 255, .18);
+  --text: #f7f7ff;
+  --text-secondary: #b7bdd8;
+  --glass-line: rgba(255,255,255,.22);
+  --glass-shadow: 0 12px 34px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.10);
+  --glass-blur: 18px;
+  --neon-violet: #a78bfa;
+  --neon-blue: #60a5fa;
+}
+html { background: #080b18; }
+body {
+  background:
+    radial-gradient(ellipse at 12% 8%, rgba(111, 65, 220, .22), transparent 38%),
+    radial-gradient(ellipse at 88% 22%, rgba(31, 116, 220, .20), transparent 36%),
+    linear-gradient(145deg, #080b18 0%, #10132a 52%, #090d1b 100%) !important;
+  color: var(--text);
+  isolation: isolate;
+}
+body::before {
+  content: "";
+  position: fixed;
+  inset: -20%;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 25% 28%, rgba(139,92,246,.17), transparent 24%),
+    radial-gradient(circle at 76% 45%, rgba(59,130,246,.16), transparent 27%),
+    radial-gradient(circle at 50% 88%, rgba(99,102,241,.12), transparent 25%);
+  filter: blur(42px);
+}
+.top-header, .category-bar, .bottom-nav {
+  background: rgba(12, 16, 35, .66) !important;
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(160%);
+  backdrop-filter: blur(var(--glass-blur)) saturate(160%);
+  border-color: var(--glass-line) !important;
+  box-shadow: var(--glass-shadow);
+}
+.top-header { border-bottom: 1px solid var(--glass-line) !important; }
+.category-bar { border-bottom: 1px solid rgba(255,255,255,.07); }
+.bottom-nav {
+  border: 1px solid var(--glass-line) !important;
+  border-bottom: 0 !important;
+  box-shadow: 0 -8px 32px rgba(0,0,0,.34), inset 0 1px 0 rgba(255,255,255,.10);
+}
+.video-card, .channel-row-card, .comments-section, .user-card,
+.setting-group, .list-item, .modal-card, .bottom-sheet,
+.sub-dropdown, .search-suggestions, .short-comments-panel,
+.short-more-menu, .video-description-panel {
+  background: linear-gradient(135deg, rgba(34, 39, 72, .72), rgba(17, 24, 49, .58)) !important;
+  border: 1px solid var(--glass-line) !important;
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(150%);
+  backdrop-filter: blur(var(--glass-blur)) saturate(150%);
+  box-shadow: var(--glass-shadow);
+}
+.video-card {
+  border-radius: 17px;
+  overflow: hidden;
+}
+.video-card:hover {
+  border-color: rgba(167,139,250,.55) !important;
+  box-shadow: 0 14px 38px rgba(72, 53, 160, .22), var(--glass-shadow);
+}
+.header-search input, .add-comment-box input, .modal-card input,
+#editChannelPage input, #editChannelPage textarea, .shorts-comment-input,
+.short-comments-compose input {
+  color: #fff !important;
+  background: rgba(7, 11, 28, .62) !important;
+  border: 1px solid rgba(170,180,255,.24) !important;
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+.header-search input:focus, .add-comment-box input:focus {
+  border-color: var(--neon-violet) !important;
+  box-shadow: 0 0 0 3px rgba(139,92,246,.18), 0 0 18px rgba(96,165,250,.13) !important;
+}
+.chip, .action-pill, .sheet-option, .nav-item.create-btn .nav-icon,
+.shorts-back-btn, .short-more-btn {
+  background: rgba(255,255,255,.075) !important;
+  border: 1px solid rgba(190,198,255,.18) !important;
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+.chip.active, .action-pill.active {
+  color: #fff !important;
+  background: linear-gradient(110deg, rgba(124,58,237,.78), rgba(37,99,235,.78)) !important;
+  border-color: rgba(190,170,255,.65) !important;
+  box-shadow: 0 0 18px rgba(124,58,237,.24);
+}
+.subscribe-btn, .google-login-btn, .btn-primary,
+.add-comment-box button, .short-comments-compose button {
+  background: linear-gradient(110deg, #8b5cf6, #3b82f6) !important;
+  color: #fff !important;
+  border: 1px solid rgba(255,255,255,.28) !important;
+  box-shadow: 0 0 16px rgba(99,102,241,.28), inset 0 1px 0 rgba(255,255,255,.2);
+}
+.subscribe-btn.subscribed { background: rgba(255,255,255,.12) !important; }
+.icon-btn:hover, .list-item:hover, .sheet-option:hover {
+  border-color: rgba(167,139,250,.55) !important;
+  box-shadow: 0 0 18px rgba(96,165,250,.15);
+}
+.brand-logo b { color: #b69aff; text-shadow: 0 0 14px rgba(167,139,250,.45); }
+.brand-logo span.in-tag {
+  background: rgba(139,92,246,.18);
+  color: #d7c7ff;
+  border-color: rgba(167,139,250,.42);
+}
+.setting-group h4 { color: #b69aff !important; }
+.bottom-sheet-overlay, .modal-overlay {
+  background: rgba(3, 6, 18, .66) !important;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+.bottom-sheet { border-radius: 22px 22px 0 0; }
+.action-pill.liked { color: #c4b5fd; border-color: #a78bfa; }
+.nav-item.active { color: #c4b5fd; text-shadow: 0 0 12px rgba(167,139,250,.35); }
+.landscape-player-btn {
+  background: rgba(25, 23, 55, .72) !important;
+  border-color: rgba(196,181,253,.65) !important;
+  box-shadow: 0 0 16px rgba(139,92,246,.24);
+}
+.mini-player, #watchSection.mini-mode {
+  border-color: rgba(196,181,253,.42) !important;
+  box-shadow: 0 10px 34px rgba(0,0,0,.6), 0 0 18px rgba(99,102,241,.18);
+}
+.shorts-comment-footer {
+  background: rgba(9, 12, 28, .88) !important;
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+}
+.shorts-comment-input { background: rgba(255,255,255,.09) !important; }
+@media (prefers-reduced-motion: no-preference) {
+  .video-card, .chip, .action-pill, .list-item, .icon-btn, .subscribe-btn {
+    transition: background .22s ease, border-color .22s ease, box-shadow .22s ease, transform .22s ease;
+  }
+}
+body.light-theme {
+  --bg: #eef0ff;
+  --surface: rgba(255,255,255,.72);
+  --surface-hover: rgba(240,242,255,.86);
+  --text: #17172b;
+  --text-secondary: #626783;
+  background: linear-gradient(145deg,#eef0ff,#e7edff 55%,#f5eaff) !important;
+}
+body.light-theme .top-header, body.light-theme .category-bar,
+body.light-theme .bottom-nav {
+  background: rgba(255,255,255,.68) !important;
+}
+body.light-theme .brand-logo, body.light-theme .meta-info h3,
+body.light-theme .icon-btn, body.light-theme .nav-item { color: #20213a !important; }
+body.light-theme .video-card, body.light-theme .channel-row-card,
+body.light-theme .comments-section, body.light-theme .user-card,
+body.light-theme .setting-group, body.light-theme .list-item {
+  background: rgba(255,255,255,.66) !important;
+  color: #20213a !important;
+}
+body.light-theme .header-search input { color:#20213a !important; background:rgba(255,255,255,.72) !important; }
+@media (max-width: 600px) {
+  .video-card { border-radius: 14px; }
+}
+
+
+/* PREMIUM FIX — keep the 4 subscription choices visible below the Subscribe button */
+.channel-row-card { overflow: visible !important; }
+.channel-row-card:has(#subDropdown.active) {
+  position: relative !important;
+  z-index: 2147482000 !important;
+  isolation: isolate;
+}
+.subscribe-wrapper { position: relative !important; z-index: 2147482001 !important; }
+#subDropdown {
+  position: absolute !important;
+  top: auto !important;
+  top: calc(100% + 12px) !important;
+  bottom: auto !important;
+  right: 0 !important;
+  left: auto !important;
+  width: min(236px, calc(100vw - 32px)) !important;
+  max-height: min(54vh, 300px) !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain;
+  z-index: 2147482002 !important;
+  border: 1px solid rgba(190, 170, 255, .52) !important;
+  border-radius: 16px !important;
+  background: linear-gradient(145deg, rgba(35, 31, 72, .97), rgba(13, 28, 58, .97)) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
+  backdrop-filter: blur(24px) saturate(180%) !important;
+  box-shadow: 0 18px 48px rgba(0,0,0,.58), 0 0 24px rgba(139,92,246,.22), inset 0 1px 0 rgba(255,255,255,.16) !important;
+  padding: 6px !important;
+}
+#subDropdown.active { display: flex !important; }
+#subDropdown .sub-option {
+  min-height: 46px;
+  padding: 12px 14px !important;
+  border-radius: 10px;
+  font-size: 13px !important;
+  line-height: 1.35;
+  color: #f8f7ff !important;
+  background: transparent;
+  transition: background .18s ease, transform .18s ease;
+}
+#subDropdown .sub-option:hover,
+#subDropdown .sub-option:focus-visible {
+  background: linear-gradient(100deg, rgba(139,92,246,.30), rgba(59,130,246,.25)) !important;
+  outline: none;
+}
+#subDropdown .sub-option:active { transform: scale(.985); }
+@media (max-width: 600px) {
+  #subDropdown { right: 0 !important; top: calc(100% + 10px) !important; bottom: auto !important; }
+}
 </style>
 <script>
 function channelData(){try{return JSON.parse(localStorage.getItem('indtube_channel_data')||'{}')}catch(e){return {}}}

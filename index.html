@@ -877,6 +877,155 @@ function indTubeIsSafeVideoItem(item) {
 }
 </style>
 
+
+<style id="indtube-landscape-icon-and-fallback">
+/* Screenshot-style four-corner fullscreen icon; keep it unobtrusive over the video. */
+.landscape-player-btn {
+  width: 42px !important;
+  height: 42px !important;
+  border: 0 !important;
+  border-radius: 8px !important;
+  background: rgba(0,0,0,.42) !important;
+  color: #fff !important;
+  box-shadow: none !important;
+  padding: 8px !important;
+  font-size: 0 !important;
+}
+.landscape-player-btn svg { width: 24px; height: 24px; display:block; }
+.landscape-player-btn:active { transform: scale(.94); background:rgba(0,0,0,.68) !important; }
+/* Fallback: rotates the video area itself if WebView cannot lock orientation. */
+#mainPlayerContainer.indtube-landscape-fallback {
+  position: fixed !important;
+  left: 50% !important;
+  top: 50% !important;
+  right: auto !important;
+  bottom: auto !important;
+  width: 100vh !important;
+  width: 100dvh !important;
+  height: 100vw !important;
+  max-width: none !important;
+  aspect-ratio: auto !important;
+  margin: 0 !important;
+  z-index: 2147483000 !important;
+  transform: translate(-50%, -50%) rotate(90deg) !important;
+  transform-origin: center center !important;
+  background: #000 !important;
+}
+#mainPlayerContainer.indtube-landscape-fallback iframe,
+#mainPlayerContainer.indtube-landscape-fallback video {
+  width: 100% !important; height: 100% !important; max-height: 100% !important;
+  object-fit: contain !important;
+}
+#mainPlayerContainer.indtube-landscape-fallback .landscape-player-btn {
+  right: max(12px, env(safe-area-inset-right)) !important;
+  bottom: max(12px, env(safe-area-inset-bottom)) !important;
+}
+</style>
+
+
+<style id="indtube-landscape-icon-only-final">
+.landscape-player-btn,
+.landscape-player-btn:hover,
+.landscape-player-btn:focus,
+.landscape-player-btn:focus-visible,
+.landscape-player-btn:active {
+  width:42px !important;
+  height:42px !important;
+  padding:9px !important;
+  border:0 !important;
+  border-radius:0 !important;
+  background:transparent !important;
+  box-shadow:none !important;
+  outline:none !important;
+  color:#fff !important;
+  -webkit-backdrop-filter:none !important;
+  backdrop-filter:none !important;
+}
+.landscape-player-btn svg {
+  width:24px !important;
+  height:24px !important;
+  display:block !important;
+  filter:drop-shadow(0 1px 3px rgba(0,0,0,.8));
+}
+</style>
+
+
+<style id="indtube-landscape-pure-white-icon-override">
+.landscape-player-btn,
+.landscape-player-btn:hover,
+.landscape-player-btn:focus,
+.landscape-player-btn:focus-visible,
+.landscape-player-btn:active,
+.sticky-player-wrapper .landscape-player-btn,
+#mainPlayerContainer .landscape-player-btn {
+  background: none !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  color: #fff !important;
+  filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  text-shadow: none !important;
+}
+.landscape-player-btn::before,
+.landscape-player-btn::after {
+  content: none !important;
+  display: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+.landscape-player-btn svg {
+  background: transparent !important;
+  color: #fff !important;
+  fill: none !important;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,.75)) !important;
+}
+.landscape-player-btn svg path {
+  stroke: #fff !important;
+  fill: none !important;
+}
+</style>
+
+
+<style id="indtube-player-top-settings-gear">
+#mainPlayerContainer { position:relative; }
+#indtubePlayerSettingsGear {
+  position:absolute !important;
+  top:8px !important;
+  right:8px !important;
+  z-index:1600 !important;
+  width:38px !important;
+  height:38px !important;
+  display:grid !important;
+  place-items:center !important;
+  padding:0 !important;
+  margin:0 !important;
+  border:0 !important;
+  border-radius:0 !important;
+  background:transparent !important;
+  box-shadow:none !important;
+  color:#fff !important;
+  cursor:pointer !important;
+  -webkit-tap-highlight-color:transparent;
+}
+#indtubePlayerSettingsGear svg {
+  width:26px !important;
+  height:26px !important;
+  display:block !important;
+  fill:none !important;
+  stroke:#fff !important;
+  stroke-width:2.2 !important;
+  stroke-linecap:round !important;
+  stroke-linejoin:round !important;
+  filter:drop-shadow(0 1px 2px rgba(0,0,0,.8)) !important;
+}
+#indtubePlayerSettingsGear:active { transform:scale(.94); }
+</style>
+
 </head>
 <body>
 
@@ -1671,24 +1820,43 @@ function renderFeedCards(items, targetContainerId, append = false) {
 async function toggleIndTubeLandscape() {
   const player = document.getElementById('mainPlayerContainer');
   if (!player) return;
+
+  const isNativeFullscreen =
+    document.fullscreenElement === player ||
+    document.webkitFullscreenElement === player;
+  const isCssLandscape = player.classList.contains('indtube-landscape-fallback');
+
+  // Tap again to return to normal portrait/player mode.
+  if (isNativeFullscreen || isCssLandscape) {
+    if (isCssLandscape) player.classList.remove('indtube-landscape-fallback');
+    try {
+      if (document.exitFullscreen && isNativeFullscreen) await document.exitFullscreen();
+      else if (document.webkitExitFullscreen && isNativeFullscreen) document.webkitExitFullscreen();
+    } catch (_) {}
+    try { if (screen.orientation && screen.orientation.unlock) screen.orientation.unlock(); } catch (_) {}
+    return;
+  }
+
+  // Fullscreen and orientation lock are browser APIs; no permission dialog is requested.
+  // Orientation lock is best-effort because some WebViews do not expose it.
   try {
-    if (document.fullscreenElement === player || document.webkitFullscreenElement === player) {
-      if (document.exitFullscreen) await document.exitFullscreen();
-      else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
-      return;
-    }
     const enter = player.requestFullscreen || player.webkitRequestFullscreen;
-    if (!enter) {
-      alert('इस ब्राउज़र में Full Screen उपलब्ध नहीं है। Chrome में खोलकर कोशिश करें।');
-      return;
+    if (enter) {
+      const result = enter.call(player);
+      if (result && typeof result.then === 'function') await result;
     }
-    const result = enter.call(player);
-    if (result && typeof result.then === 'function') await result;
-    // Orientation lock generally works only after fullscreen and may be unavailable in some WebViews.
-    try { if (screen.orientation && screen.orientation.lock) await screen.orientation.lock('landscape'); } catch (_) {}
+    try {
+      if (screen.orientation && screen.orientation.lock) {
+        await screen.orientation.lock('landscape');
+      }
+    } catch (_) {
+      // Use a CSS landscape view if orientation lock is unsupported/rejected.
+      player.classList.add('indtube-landscape-fallback');
+    }
   } catch (error) {
     console.warn('IndTube fullscreen:', error);
-    alert('Full Screen नहीं खुल पाया। मोबाइल की Auto-rotate setting चालू करके फिर कोशिश करें।');
+    // Fallback for Android WebViews that do not support the fullscreen API.
+    player.classList.add('indtube-landscape-fallback');
   }
 }
 
@@ -1720,7 +1888,7 @@ function openWatchScreen(videoId, snippet = {}) {
   window.scrollTo({top:0,behavior:'instant'});
   const origin = /^https?:$/.test(location.protocol) ? `&origin=${encodeURIComponent(location.origin)}` : '';
   const player = document.getElementById('mainPlayerContainer');
-  if (player) player.innerHTML = `<div class="mini-inline-controls"><span>▶ IndTube में चल रहा है</span><span><button type="button" onclick="restoreMiniPlayer()" aria-label="वापस खोलें">↗</button> <button type="button" onclick="stopMiniPlayer()" aria-label="बंद करें">×</button></span></div><button class="landscape-player-btn" type="button" onclick="toggleIndTubeLandscape()" aria-label="Landscape full screen" title="Landscape Full Screen">⤢</button><iframe src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(videoId)}?autoplay=1&playsinline=1&controls=1&rel=0&enablejsapi=1${origin}" referrerpolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen title="${escapeHtml(snippet.title||'YouTube video')}"></iframe>`;
+  if (player) player.innerHTML = `<div class="mini-inline-controls"><span>▶ IndTube में चल रहा है</span><span><button type="button" onclick="restoreMiniPlayer()" aria-label="वापस खोलें">↗</button> <button type="button" onclick="stopMiniPlayer()" aria-label="बंद करें">×</button></span></div><button class="landscape-player-btn" type="button" onclick="toggleIndTubeLandscape()" aria-label="Landscape full screen" title="Landscape Full Screen"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false"><path d="M8 3H3v5 M16 3h5v5 M3 16v5h5 M21 16v5h-5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button><iframe src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(videoId)}?autoplay=1&playsinline=1&controls=1&rel=0&enablejsapi=1${origin}" referrerpolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen title="${escapeHtml(snippet.title||'YouTube video')}"></iframe>`;
   initMiniPlayerDrag();
   const title = document.getElementById('watchVideoTitle');
   if (title) { title.textContent=(snippet.title||'Video')+' ▾'; title.setAttribute('aria-expanded','false'); }
@@ -2223,7 +2391,7 @@ function playLocalVideo(video) {
   loadHorizontalShortsShelf(video.title || '');
   fetchRelatedVideos(video.title || '');
   const url = URL.createObjectURL(video.file);
-  document.getElementById('mainPlayerContainer').innerHTML = `<div class="mini-inline-controls"><span>▶ IndTube में चल रहा है</span><span><button type="button" onclick="restoreMiniPlayer()" aria-label="वापस खोलें">↗</button> <button type="button" onclick="stopMiniPlayer()" aria-label="बंद करें">×</button></span></div><button class="landscape-player-btn" type="button" onclick="toggleIndTubeLandscape()" aria-label="Landscape full screen" title="Landscape Full Screen">⤢</button><video controls autoplay playsinline style="width:100%;height:100%;aspect-ratio:16/9;background:#000" src="${url}"></video>`;
+  document.getElementById('mainPlayerContainer').innerHTML = `<div class="mini-inline-controls"><span>▶ IndTube में चल रहा है</span><span><button type="button" onclick="restoreMiniPlayer()" aria-label="वापस खोलें">↗</button> <button type="button" onclick="stopMiniPlayer()" aria-label="बंद करें">×</button></span></div><button class="landscape-player-btn" type="button" onclick="toggleIndTubeLandscape()" aria-label="Landscape full screen" title="Landscape Full Screen"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false"><path d="M8 3H3v5 M16 3h5v5 M3 16v5h5 M21 16v5h-5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button><video controls autoplay playsinline style="width:100%;height:100%;aspect-ratio:16/9;background:#000" src="${url}"></video>`;
   initMiniPlayerDrag();
   document.querySelectorAll('.view-section').forEach(section => section.classList.remove('active'));
   document.getElementById('watchSection').classList.add('active');
@@ -3655,6 +3823,34 @@ function handleBannerPicked(e){const f=e.target.files?.[0];if(!f)return;if(!f.ty
 const oldRenderProfileLogo=renderProfileLogo;renderProfileLogo=function(){oldRenderProfileLogo();renderChannelAvatar()}
 document.addEventListener('DOMContentLoaded',()=>{const d=channelData();if(d.name)document.getElementById('userName').textContent=d.name;const oldName=document.getElementById('userName').textContent;document.getElementById('channelDisplayName').textContent=oldName;renderChannelAvatar()});
 </script>
+
+<script id="indtube-player-settings-gear-script">
+(function(){
+  const gearMarkup = `<button id="indtubePlayerSettingsGear" type="button" aria-label="Settings" title="Settings" onclick="switchTab('you')">
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M12 8.2a3.8 3.8 0 1 0 0 7.6 3.8 3.8 0 0 0 0-7.6Z"/>
+      <path d="m19.4 13.5 1.1.8-1.2 2.1-1.3-.5a7.8 7.8 0 0 1-1.5.9l-.2 1.4h-2.5l-.3-1.4a7.8 7.8 0 0 1-1.7 0l-.7 1.2-2.2-1.2.5-1.3a7.8 7.8 0 0 1-.9-1.5l-1.4-.2v-2.5l1.4-.3a7.8 7.8 0 0 1 .6-1.5l-.8-1.1 1.8-1.8 1.2.8a7.8 7.8 0 0 1 1.6-.6l.3-1.4h2.5l.2 1.4a7.8 7.8 0 0 1 1.5.6l1.2-.8 1.8 1.8-.8 1.2c.3.5.5 1 .6 1.5l1.4.3v2.5l-1.4.2Z"/>
+    </svg>
+  </button>`;
+  function addGear(){
+    const player = document.getElementById('mainPlayerContainer');
+    if(!player || !player.querySelector('iframe,video')) return;
+    if(!document.getElementById('indtubePlayerSettingsGear')){
+      player.insertAdjacentHTML('beforeend', gearMarkup);
+    }
+  }
+  const start = () => {
+    const player = document.getElementById('mainPlayerContainer');
+    if(player){
+      new MutationObserver(addGear).observe(player,{childList:true,subtree:true});
+      addGear();
+    }
+  };
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',start,{once:true});
+  else start();
+})();
+</script>
+
 </body>
 </html>
 <style>.indtube-subscription-channel-strip button:focus-visible{outline:2px solid var(--accent,#ff6a00);outline-offset:3px;border-radius:12px}.indtube-subscription-channel-strip button:hover{opacity:.86}</style>

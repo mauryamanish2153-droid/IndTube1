@@ -656,6 +656,227 @@ img, video, iframe { max-width: 100%; }
   transform: translateY(12px) !important;
 }
 </style>
+
+<style id="indtube-hide-native-search-clear">
+/* Remove the browser's built-in clear (X) control from the search field.
+   Keep IndTube's search-glass and microphone buttons unchanged. */
+#searchInput[type="search"]::-webkit-search-cancel-button,
+#searchInput[type="search"]::-webkit-search-decoration,
+#searchInput[type="search"]::-webkit-search-results-button,
+#searchInput[type="search"]::-webkit-search-results-decoration {
+  -webkit-appearance: none !important;
+  appearance: none !important;
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  margin: 0 !important;
+}
+#searchInput[type="search"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+</style>
+
+
+<style id="indtube-mobile-search-compact-fix">
+/* Mobile search: compact header, no sideways overflow, and hide navigation while searching. */
+@media (max-width: 600px) {
+  html, body {
+    max-width: 100%;
+    overflow-x: clip;
+    overscroll-behavior-x: none;
+  }
+  .top-header.search-expanded {
+    width: 100%;
+    height: 52px;
+    min-height: 52px;
+    padding: 5px 9px !important;
+    gap: 0 !important;
+    overflow: hidden;
+    touch-action: pan-y;
+  }
+  .top-header.search-expanded .brand-logo,
+  .top-header.search-expanded .header-icons {
+    display: none !important;
+  }
+  .top-header.search-expanded .header-search {
+    display: flex !important;
+    flex: 1 1 100% !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+  }
+  .top-header.search-expanded .header-search input {
+    width: 100% !important;
+    min-width: 0 !important;
+    height: 38px !important;
+    min-height: 38px !important;
+    padding: 7px 76px 7px 12px !important;
+    font-size: 14px !important;
+    border-radius: 19px !important;
+  }
+  .top-header.search-expanded .header-search .search-icon-btn {
+    right: 39px !important;
+    width: 30px !important;
+    height: 30px !important;
+  }
+  .top-header.search-expanded .header-search .voice-search-btn {
+    right: 2px !important;
+    width: 30px !important;
+    height: 30px !important;
+    min-width: 30px !important;
+  }
+  body.search-page-open .bottom-nav {
+    display: none !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+  }
+  body.search-page-open {
+    padding-bottom: 0 !important;
+  }
+  body.search-page-open #categoryBar,
+  body.search-page-open #homeFeedSection {
+    display: none !important;
+  }
+  body.search-page-open .search-suggestions {
+    max-width: calc(100vw - 18px);
+    left: 0 !important;
+    right: 0 !important;
+  }
+}
+</style>
+
+
+<script id="indtube-safe-video-filter">
+/* Conservative metadata filter: hides likely adult/explicit results and YouTube age-restricted items. */
+function indTubeIsSafeVideoItem(item) {
+  const snippet = item?.snippet || {};
+  const details = item?.contentDetails || {};
+  const rating = details?.contentRating?.ytRating || '';
+  if (String(rating).toLowerCase().includes('agerestricted')) return false;
+  const text = [
+    snippet.title, snippet.description, snippet.channelTitle,
+    ...(Array.isArray(snippet.tags) ? snippet.tags : [])
+  ].join(' ').toLowerCase();
+  const blockedTerms = [
+    '18+', 'adult only', 'adult video', 'xxx', 'porn', 'pornography',
+    'sexual content', 'sex video', 'nude', 'nudity', 'naked',
+    'erotic', 'hot intimate', 'explicit scenes', 'uncensored adult',
+    'अश्लील', 'न्यूड', 'नग्न', 'सेक्स वीडियो', 'वयस्क वीडियो'
+  ];
+  return !blockedTerms.some(term => text.includes(term));
+}
+</script>
+
+
+<style id="indtube-search-history-drag-style">
+.search-suggestion-row.search-history-row {
+  position: relative;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: pan-y;
+  transition: transform .16s ease, opacity .16s ease, background .16s ease;
+  will-change: transform;
+}
+.search-suggestion-row.search-history-row.dragging-delete {
+  background: rgba(220, 45, 45, .18);
+}
+.search-suggestion-row.search-history-row.removing {
+  opacity: 0;
+  transform: translateX(110%);
+  pointer-events: none;
+}
+.search-suggestion-row .history-delete-hint {
+  display: none;
+  margin-left: auto;
+  color: #ff7777;
+  font-size: 11px;
+  white-space: nowrap;
+}
+.search-suggestion-row.search-history-row.dragging-delete .history-delete-hint {
+  display: inline;
+}
+</style>
+
+
+<style id="indtube-youtube-action-icons">
+.action-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+}
+.action-pill .action-icon {
+  width: 19px;
+  height: 19px;
+  flex: 0 0 19px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.action-pill .like-icon path,
+.action-pill .dislike-icon path {
+  fill: transparent;
+  stroke: currentColor;
+}
+.action-pill.liked {
+  color: #fff !important;
+  background: rgba(62, 166, 255, .22) !important;
+  border-color: #3ea6ff !important;
+}
+.action-pill.liked .like-icon path {
+  fill: #3ea6ff;
+  stroke: #3ea6ff;
+}
+.action-pill#dislikeBtn.active {
+  color: #fff !important;
+  background: rgba(255,255,255,.18) !important;
+  border-color: rgba(255,255,255,.75) !important;
+}
+.action-pill#dislikeBtn.active .dislike-icon path {
+  fill: currentColor;
+}
+@media (max-width: 600px) {
+  .action-pill .action-icon { width: 18px; height: 18px; flex-basis: 18px; }
+}
+</style>
+
+
+<style id="indtube-comment-download-watchlater-icons">
+.action-pill .comment-icon,
+.action-pill .watchlater-icon,
+.action-pill .download-icon,
+.comments-heading-label .comment-icon {
+  width: 19px;
+  height: 19px;
+  flex: 0 0 19px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.comments-heading-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+#saveBtn:has(#saveBtnLabel) { gap: 7px; }
+@media (max-width: 600px) {
+  .action-pill .comment-icon,
+  .action-pill .watchlater-icon,
+  .action-pill .download-icon,
+  .comments-heading-label .comment-icon {
+    width: 18px;
+    height: 18px;
+    flex-basis: 18px;
+  }
+}
+</style>
+
 </head>
 <body>
 
@@ -749,23 +970,29 @@ img, video, iframe { max-width: 100%; }
 
       <!-- Action Row Bar -->
       <div class="action-buttons-row">
-        <button class="action-pill" id="likeBtn" onclick="toggleLike()">
-          👍 <span id="likeCount">0</span>
+        <button class="action-pill" id="likeBtn" onclick="toggleLike()" aria-label="Like" title="Like">
+          <svg class="action-icon like-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10v11H3V10h4Zm4 11h7.2a2 2 0 0 0 1.96-1.61l1.7-8A2 2 0 0 0 19.9 9H14l.8-4.1A2.4 2.4 0 0 0 12.45 2L7 10v9a2 2 0 0 0 2 2h2Z" /></svg>
+          <span id="likeCount">0</span>
         </button>
-        <button class="action-pill" id="dislikeBtn" onclick="toggleDislike()">
-          👎 Dislike
+        <button class="action-pill" id="dislikeBtn" onclick="toggleDislike()" aria-label="Dislike" title="Dislike">
+          <svg class="action-icon dislike-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 14V3h4v11h-4ZM13 3H5.8a2 2 0 0 0-1.96 1.61l-1.7 8A2 2 0 0 0 4.1 15H10l-.8 4.1A2.4 2.4 0 0 0 11.55 22L17 14V5a2 2 0 0 0-2-2h-2Z" /></svg>
+          <span>Dislike</span>
         </button>
-        <button class="action-pill" onclick="shareVideo()">
-          ↗️ Share
+        <button class="action-pill" onclick="shareVideo()" aria-label="Share" title="Share">
+          <svg class="action-icon share-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V3m0 0L7 8m5-5 5 5M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6" /></svg>
+          <span>Share</span>
         </button>
-        <button class="action-pill" onclick="scrollComments()">
-          💬 Comment <span id="commentCountTag">0</span>
+        <button class="action-pill" onclick="scrollComments()" aria-label="Comments" title="Comments">
+          <svg class="action-icon comment-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11.5a7.5 7.5 0 0 1-7.5 7.5H7l-4 2v-6.5A7.5 7.5 0 1 1 20 11.5Z"/></svg>
+          <span>Comment</span> <span id="commentCountTag">0</span>
         </button>
-        <button class="action-pill" id="saveBtn" onclick="toggleSaveWatchLater()">
-          ➕ Watch Later
+        <button class="action-pill" id="saveBtn" onclick="toggleSaveWatchLater()" aria-label="Watch Later" title="Watch Later">
+          <svg class="action-icon watchlater-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+          <span id="saveBtnLabel">Watch Later</span>
         </button>
-        <button class="action-pill" onclick="alert('YouTube video downloads are controlled by YouTube. Use the official Download option where available.')">
-          ⬇️ Download
+        <button class="action-pill" id="downloadBtn" onclick="alert('YouTube video downloads are controlled by YouTube. Use the official Download option where available.')" aria-label="Download" title="Download">
+          <svg class="action-icon download-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 5-5m-5 5-5-5M4 19v2h16v-2"/></svg>
+          <span>Download</span>
         </button>
       </div>
 
@@ -773,7 +1000,7 @@ img, video, iframe { max-width: 100%; }
       <div class="comments-section" id="commentsSection">
         <button class="comments-header" id="commentsToggle" type="button"
           aria-expanded="false" aria-controls="commentsContent" onclick="toggleCommentsSection()">
-          <span>💬 Comments (<span id="commentTotal">2</span>)</span>
+          <span class="comments-heading-label"><svg class="action-icon comment-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11.5a7.5 7.5 0 0 1-7.5 7.5H7l-4 2v-6.5A7.5 7.5 0 1 1 20 11.5Z"/></svg> Comments (<span id="commentTotal">2</span>)</span>
           <span class="comments-toggle-indicator" id="commentsToggleIndicator">＋</span>
         </button>
         <div id="commentsContent" hidden>
@@ -1316,7 +1543,7 @@ async function loadMoreVideos(initial = false, requestVersion = feedRequestVersi
       }
     }
     if (requestVersion !== feedRequestVersion) return;
-    let items = (data.items || []).filter(item => getVideoId(item) && item.snippet);
+    let items = (data.items || []).filter(item => getVideoId(item) && item.snippet && indTubeIsSafeVideoItem(item));
     // Shuffle the first home batch so refreshes do not always show the same ordering.
     if (initial && !currentQuery && currentFeedMode === 'home') {
       for (let i = items.length - 1; i > 0; i--) {
@@ -1508,7 +1735,7 @@ function openWatchScreen(videoId, snippet = {}) {
   if(snippet.channelId) hydrateChannelAvatars([{snippet}]);
   const lb=document.getElementById('likeBtn'); if(lb)lb.classList.toggle('liked',isLiked);
   document.getElementById('dislikeBtn')?.classList.remove('active');
-  const save=document.getElementById('saveBtn'); if(save)save.textContent=watchLaterList.some(v=>v.id===videoId)?'✔ Saved':'➕ Watch Later';
+  const save=document.getElementById('saveBtn'); if(save){const label=save.querySelector('#saveBtnLabel');if(label)label.textContent=watchLaterList.some(v=>v.id===videoId)?'Saved':'Watch Later';}
   subscriptionState=subscriptions[snippet.channelId]||'none'; updateSubscriptionUI(); updateDisplayedLikeCount(); renderComments();
   loadRealVideoStats(videoId,snippet.channelId||'');
   const shelf=document.getElementById('shortsShelfSection'); if(shelf)shelf.style.display='';
@@ -2182,6 +2409,7 @@ window.addEventListener('popstate', (event) => {
       document.body.classList.remove('search-page-open');
       const top = document.getElementById('topHeader');
       if (top) top.classList.remove('search-expanded');
+      document.body.classList.remove('search-page-open');
       const suggestions = document.getElementById('searchSuggestions');
       if (suggestions) { suggestions.classList.remove('show'); suggestions.innerHTML = ''; }
       const searchHead = document.getElementById('searchResultsHeader');
@@ -2190,7 +2418,12 @@ window.addEventListener('popstate', (event) => {
       if (related) related.innerHTML = '';
       const input = document.getElementById('searchInput');
       if (input) { input.value = ''; input.blur(); }
-      // Keep the existing Home feed DOM intact so the return position remains valid.
+      // IMPORTANT: Search results and Home share the same feed container.
+      // Reload the Home feed here so Back never leaves search matches on Home.
+      fetchYouTubeVideos('', false);
+      try {
+        history.replaceState({ indtubeView:'home', indtubeHome:true }, '', location.pathname + location.search + '#home');
+      } catch (_) {}
     }
     setActiveNav('navHome');
   }
@@ -2371,10 +2604,10 @@ function toggleSaveWatchLater() {
   const index = watchLaterList.findIndex(v => v.id === currentVideoObj.id);
   if (index < 0) {
     watchLaterList.push(currentVideoObj);
-    document.getElementById('saveBtn').innerText = '✔ Saved';
+    document.getElementById('saveBtnLabel').textContent = 'Saved';
   } else {
     watchLaterList.splice(index, 1);
-    document.getElementById('saveBtn').innerText = '➕ Watch Later';
+    document.getElementById('saveBtnLabel').textContent = 'Watch Later';
   }
   persist('indtube_watchlater', watchLaterList);
 }
@@ -2452,6 +2685,55 @@ function saveSearchHistory(q) {
     list.unshift(q); localStorage.setItem('indtube_search_history', JSON.stringify(list.slice(0,15)));
   } catch (_) {}
 }
+
+function deleteSearchHistoryEntry(query) {
+  const remaining = getSearchHistory().filter(value => value.toLowerCase() !== String(query || '').toLowerCase());
+  try { localStorage.setItem('indtube_search_history', JSON.stringify(remaining)); } catch (_) {}
+  showSearchSuggestions(remaining, 'हाल की खोज');
+}
+(function installSearchHistorySwipeDelete() {
+  if (window.__indtubeHistorySwipeInstalled) return;
+  window.__indtubeHistorySwipeInstalled = true;
+  let gesture = null;
+  document.addEventListener('pointerdown', event => {
+    const row = event.target.closest('.search-history-row');
+    if (!row || event.button !== 0) return;
+    gesture = { row, id: event.pointerId, x: event.clientX, y: event.clientY, started: Date.now(), dx: 0, moved: false };
+  }, { passive: true });
+  document.addEventListener('pointermove', event => {
+    if (!gesture || event.pointerId !== gesture.id) return;
+    const dx = event.clientX - gesture.x;
+    const dy = event.clientY - gesture.y;
+    if (Math.abs(dy) > 14 && Math.abs(dy) > Math.abs(dx)) { gesture = null; return; }
+    if (Math.abs(dx) > 8) {
+      gesture.moved = true;
+      gesture.dx = dx;
+      gesture.row.classList.add('dragging-delete');
+      gesture.row.style.transform = `translateX(${Math.max(-20, Math.min(120, dx))}px)`;
+    }
+  }, { passive: true });
+  document.addEventListener('pointerup', event => {
+    if (!gesture || event.pointerId !== gesture.id) return;
+    const current = gesture;
+    gesture = null;
+    if (current.moved && Math.abs(current.dx) >= 65) {
+      const query = current.row.dataset.query || '';
+      current.row.classList.add('removing');
+      setTimeout(() => deleteSearchHistoryEntry(query), 170);
+    } else {
+      current.row.classList.remove('dragging-delete');
+      current.row.style.transform = '';
+    }
+  }, { passive: true });
+  document.addEventListener('pointercancel', () => {
+    if (gesture?.row) {
+      gesture.row.classList.remove('dragging-delete');
+      gesture.row.style.transform = '';
+    }
+    gesture = null;
+  }, { passive: true });
+})();
+
 function showSearchSuggestions(items, heading) {
   const box = document.getElementById('searchSuggestions');
   if (!box) return;
@@ -2461,7 +2743,8 @@ function showSearchSuggestions(items, heading) {
       const q = typeof item === 'string' ? item : item.text;
       const img = item && item.thumb ? `<img src="${item.thumb}" alt="">` : '';
       const icon = item && item.thumb ? ' ' : (heading === 'हाल की खोज' ? '◷' : '⌕');
-      return `<div class="search-suggestion-row" data-query="${String(q).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;')}" onclick="chooseSearchSuggestion(this.dataset.query)"><span class="ss-icon">${icon}</span><span class="ss-label">${String(q).replace(/&/g,'&amp;').replace(/</g,'&lt;')}</span>${img}<span class="ss-icon">↗</span></div>`;
+      const isHistory = heading === 'हाल की खोज';
+      return `<div class="search-suggestion-row${isHistory ? ' search-history-row' : ''}" data-query="${String(q).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;')}" onclick="chooseSearchSuggestion(this.dataset.query)"><span class="ss-icon">${icon}</span><span class="ss-label">${String(q).replace(/&/g,'&amp;').replace(/</g,'&lt;')}</span>${img}<span class="ss-icon">↗</span>${isHistory ? '<span class="history-delete-hint">हटाएँ</span>' : ''}</div>`;
     }).join('');
   box.classList.add('show');
 }
@@ -2469,16 +2752,26 @@ function expandSearch() {
   document.body.classList.add('search-page-open');
   const header = document.getElementById('topHeader');
   if (header) header.classList.add('search-expanded');
+  // Give the mobile Back button a real navigation step while search is open.
+  // Search results replace this temporary state, so one Back returns Home.
+  try {
+    if (!history.state?.indtubeSearchOpen && history.state?.indtubeView !== 'search') {
+      history.pushState({ indtubeView: 'search-open', indtubeSearchOpen: true }, '', '#search-open');
+    }
+  } catch (_) {}
   const q = document.getElementById('searchInput')?.value.trim() || '';
   if (!q) showSearchSuggestions(getSearchHistory(), 'हाल की खोज');
 }
 function collapseSearch() {
   setTimeout(() => {
+    const input = document.getElementById('searchInput');
+    if (input && document.activeElement === input) return;
     const box = document.getElementById('searchSuggestions');
     if (box) box.classList.remove('show');
     const header = document.getElementById('topHeader');
     if (header) header.classList.remove('search-expanded');
-  }, 160);
+    document.body.classList.remove('search-page-open');
+  }, 180);
 }
 function handleSearchInput() {
   expandSearch();
@@ -2603,7 +2896,9 @@ function executeSearch() {
   document.body.classList.remove('search-page-open');
   const currentView = history.state?.indtubeView || 'home';
   const searchState = { indtubeView:'search', indtubeSearch:true, query:q };
-  // First search creates one Back step to Home; searches from the results page replace it.
+  // Keep the temporary search-open entry underneath the results.
+  // Android Back from results then lands on search-open, which popstate
+  // deliberately renders as Home. Repeated searches update the current result entry.
   try {
     if (currentView === 'search') history.replaceState(searchState, '', '#search');
     else history.pushState(searchState, '', '#search');

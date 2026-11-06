@@ -2400,23 +2400,16 @@ async function getIndTubeSession() {
   if (error) throw error;
   if (session) return session;
 
-  const email = prompt('IndTube account ke liye apna email address likhein:');
-  if (!email) return null;
-  const password = prompt('Password likhein (kam se kam 6 characters):');
-  if (!password) return null;
-
-  let result = await indSupabase.auth.signInWithPassword({ email: email.trim(), password });
-  if (result.error) {
-    const create = confirm('Login nahi hua. Kya isi email se naya IndTube account banana hai?');
-    if (!create) throw result.error;
-    result = await indSupabase.auth.signUp({ email: email.trim(), password });
-    if (result.error) throw result.error;
-    if (!result.data.session) {
-      alert('Account request ban gayi. Email par confirmation link aaye to confirm karke phir upload karein.');
-      return null;
+  // Use the configured Google OAuth flow instead of asking users for a password.
+  const { error: loginError } = await indSupabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: window.location.href.split('#')[0],
+      queryParams: { prompt: 'select_account' }
     }
-  }
-  return result.data.session;
+  });
+  if (loginError) throw loginError;
+  return null; // Browser navigates to Google; upload resumes after sign-in.
 }
 
 let selectedVideoFile = null;
@@ -3243,14 +3236,69 @@ function applySettingsToUI() {
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content', userSettings.darkTheme ? '#0f0f0f' : '#f5f5f5');
   document.querySelectorAll('[data-setting]').forEach(input => input.checked = !!userSettings[input.dataset.setting]);
 }
-function updateUserUI() {}
-async function handleGoogleLogin() {
-  const { error } = await indSupabase.auth.signInWithOAuth({
-    provider: 'google',
-    options: { redirectTo: window.location.href.split('#')[0], queryParams: { prompt: 'select_account' } }
-  });
-  if (error) alert('Google sign-in error: ' + error.message + '. Supabase Authentication > Providers me Google enable karke Google OAuth credentials add karein.');
+async function updateUserUI(sessionArg) {
+  const avatar = document.getElementById('userAvatar');
+  const nameEl = document.getElementById('userName');
+  const statusEl = document.getElementById('userStatus');
+  const authBox = document.getElementById('authBtnContainer');
+  if (!nameEl || !statusEl || !authBox) return;
+  try {
+    let session = sessionArg;
+    if (typeof session === 'undefined') {
+      const result = await indSupabase.auth.getSession();
+      if (result.error) throw result.error;
+      session = result.data.session;
+    }
+    const user = session?.user;
+    if (!user) {
+      nameEl.textContent = 'User Account';
+      statusEl.textContent = 'Not Logged In';
+      authBox.innerHTML = '<button class="google-login-btn" onclick="handleGoogleLogin()"><span style="font-size:20px;font-weight:bold;color:#4285F4">G</span> Sign in with Gmail</button>';
+      if (avatar && !localStorage.getItem('indtube_profile_logo')) avatar.textContent = 'U';
+      return;
+    }
+    const meta = user.user_metadata || {};
+    const displayName = meta.full_name || meta.name || user.email?.split('@')[0] || 'IndTube User';
+    const photo = meta.avatar_url || meta.picture || '';
+    nameEl.textContent = displayName;
+    statusEl.textContent = '✓ Gmail Login Active · 1 account\n' + (user.email || 'Email unavailable');
+    if (avatar && photo && !localStorage.getItem('indtube_profile_logo')) {
+      avatar.innerHTML = '';
+      const img = document.createElement('img'); img.alt = 'Google profile photo'; img.src = photo; img.referrerPolicy = 'no-referrer';
+      avatar.appendChild(img);
+    } else if (avatar && !photo && !localStorage.getItem('indtube_profile_logo')) {
+      avatar.textContent = (displayName.trim()[0] || 'U').toUpperCase();
+    }
+    authBox.innerHTML = '<div class="indtube-auth-card"><div class="indtube-auth-email">Signed in as</div><div class="indtube-auth-address"></div><button class="indtube-logout-btn" onclick="handleGoogleLogout()">Logout</button></div>';
+    authBox.querySelector('.indtube-auth-address').textContent = user.email || 'Email unavailable';
+  } catch (err) {
+    console.warn('IndTube auth status could not be loaded:', err);
+    statusEl.textContent = 'Login status check nahi ho paya';
+  }
 }
+
+async function handleGoogleLogin() {
+  try {
+    const { error } = await indSupabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: window.location.href.split('#')[0], queryParams: { prompt: 'select_account' } }
+    });
+    if (error) alert('Google sign-in error: ' + error.message);
+  } catch (error) { alert('Google login shuru nahi ho paya: ' + (error.message || error)); }
+}
+
+async function handleGoogleLogout() {
+  if (!confirm('Kya aap IndTube se is Gmail account ko logout karna chahte hain?')) return;
+  const { error } = await indSupabase.auth.signOut();
+  if (error) { alert('Logout nahi ho paya: ' + error.message); return; }
+  await updateUserUI(null);
+  alert('IndTube se logout ho gaya.');
+}
+
+// Keep the You section updated after Google redirects back or the user logs out.
+indSupabase.auth.onAuthStateChange((_event, session) => {
+  setTimeout(() => updateUserUI(session), 0);
+});
 
 function isShortFiltered(item) {
   const id = getVideoId(item);
@@ -3632,6 +3680,11 @@ function closeShorts() {
 .you-identity .user-details p{margin:0;color:var(--text-secondary);font-size:13px}
 .you-text-link{padding:5px 0;border:0;background:none;color:var(--accent,#ff9d32);font-weight:600}
 #authBtnContainer .google-login-btn{width:100%;border-radius:24px;margin:0}
+.indtուբe-auth-card{padding:12px;border:1px solid var(--border);border-radius:12px;background:var(--surface)}
+.indtուբe-auth-email{font-size:12px;color:var(--text-secondary);margin-bottom:4px}
+.indtուբe-auth-address{font-size:14px;font-weight:600;overflow-wrap:anywhere;margin-bottom:10px}
+.indtուբe-logout-btn{border:1px solid #d9534f;background:transparent;color:#ff7772;border-radius:20px;padding:8px 18px;font-weight:600}
+#userStatus{white-space:pre-line;overflow-wrap:anywhere;line-height:1.5}
 .you-section-title{display:flex;justify-content:space-between;align-items:center;margin:18px 0 10px}
 .you-section-title button{border:0;background:none;color:var(--accent,#ff9d32)}
 .you-history-row{display:flex;gap:12px;align-items:center;overflow:auto;color:var(--text-secondary);font-size:13px}

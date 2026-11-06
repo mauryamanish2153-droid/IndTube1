@@ -2321,7 +2321,31 @@ async function fetchRelatedVideos(query) {
   }
 }
 
-function handleSubscribeClick() {
+async function requireIndTubeLoginForSubscribe() {
+  try {
+    const { data, error } = await indSupabase.auth.getSession();
+    if (error) throw error;
+    if (data?.session?.user) return true;
+  } catch (error) {
+    console.error('Subscribe login check failed:', error);
+  }
+
+  // Signed-out users are taken to IndTube's account page and the Google
+  // account chooser is opened immediately. No subscription state is changed.
+  switchTab('you');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  const status = document.getElementById('userStatus');
+  if (status) status.textContent = 'Subscribe करने के लिए Gmail से Login करें';
+  try {
+    await handleGoogleLogin();
+  } catch (error) {
+    console.error('Google login launch failed:', error);
+    alert('Gmail Login शुरू नहीं हो पाया। कृपया You पेज पर Sign in with Gmail दबाएँ।');
+  }
+  return false;
+}
+async function handleSubscribeClick() {
+  if (!(await requireIndTubeLoginForSubscribe())) return;
   const dropdown = document.getElementById('subDropdown');
   if (subscriptionState === 'none') setSubscriptionState('all');
   else dropdown.classList.toggle('active');
@@ -3236,69 +3260,121 @@ function applySettingsToUI() {
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content', userSettings.darkTheme ? '#0f0f0f' : '#f5f5f5');
   document.querySelectorAll('[data-setting]').forEach(input => input.checked = !!userSettings[input.dataset.setting]);
 }
-async function updateUserUI(sessionArg) {
-  const avatar = document.getElementById('userAvatar');
-  const nameEl = document.getElementById('userName');
-  const statusEl = document.getElementById('userStatus');
-  const authBox = document.getElementById('authBtnContainer');
-  if (!nameEl || !statusEl || !authBox) return;
-  try {
-    let session = sessionArg;
-    if (typeof session === 'undefined') {
-      const result = await indSupabase.auth.getSession();
-      if (result.error) throw result.error;
-      session = result.data.session;
+function removeDuplicateSignedInLabels() {
+  const primaryEmailEl = document.getElementById('userEmailDisplay');
+  const primaryEmail = (primaryEmailEl?.textContent || '').replace(/\s+/g, ' ').trim().toLowerCase();
+  const youPage = document.getElementById('youSection') || document;
+
+  // Remove any legacy "Signed in as" label and its immediately-following email.
+  for (const el of Array.from(youPage.querySelectorAll('*'))) {
+    if (!el.isConnected || el === primaryEmailEl || el.contains(primaryEmailEl)) continue;
+    const text = (el.textContent || '').replace(/\s+/g, ' ').trim();
+    if (/^Signed in as:?$/i.test(text) && el.children.length === 0) {
+      const next = el.nextElementSibling;
+      el.remove();
+      if (next && next !== primaryEmailEl &&
+          (next.textContent || '').replace(/\s+/g, ' ').trim().toLowerCase() === primaryEmail) {
+        next.remove();
+      }
     }
-    const user = session?.user;
-    if (!user) {
-      nameEl.textContent = 'User Account';
-      statusEl.textContent = 'Not Logged In';
-      authBox.innerHTML = '<button class="google-login-btn" onclick="handleGoogleLogin()"><span style="font-size:20px;font-weight:bold;color:#4285F4">G</span> Sign in with Gmail</button>';
-      if (avatar && !localStorage.getItem('indtube_profile_logo')) avatar.textContent = 'U';
-      return;
-    }
-    const meta = user.user_metadata || {};
-    const displayName = meta.full_name || meta.name || user.email?.split('@')[0] || 'IndTube User';
-    const photo = meta.avatar_url || meta.picture || '';
-    nameEl.textContent = displayName;
-    statusEl.textContent = '✓ Gmail Login Active · 1 account\n' + (user.email || 'Email unavailable');
-    if (avatar && photo && !localStorage.getItem('indtube_profile_logo')) {
-      avatar.innerHTML = '';
-      const img = document.createElement('img'); img.alt = 'Google profile photo'; img.src = photo; img.referrerPolicy = 'no-referrer';
-      avatar.appendChild(img);
-    } else if (avatar && !photo && !localStorage.getItem('indtube_profile_logo')) {
-      avatar.textContent = (displayName.trim()[0] || 'U').toUpperCase();
-    }
-    authBox.innerHTML = '<div class="indtube-auth-card"><div class="indtube-auth-email">Signed in as</div><div class="indtube-auth-address"></div><button class="indtube-logout-btn" onclick="handleGoogleLogout()">Logout</button></div>';
-    authBox.querySelector('.indtube-auth-address').textContent = user.email || 'Email unavailable';
-  } catch (err) {
-    console.warn('IndTube auth status could not be loaded:', err);
-    statusEl.textContent = 'Login status check nahi ho paya';
+  }
+
+  // Keep exactly one email line: the canonical one below "Gmail Login Active".
+  if (primaryEmail) {
+    const matches = Array.from(youPage.querySelectorAll('*'))
+      .filter(el => el !== primaryEmailEl &&
+        !el.contains(primaryEmailEl) &&
+        el.children.length === 0 &&
+        (el.textContent || '').replace(/\s+/g, ' ').trim().toLowerCase() === primaryEmail);
+    matches.forEach(el => el.remove());
   }
 }
 
-async function handleGoogleLogin() {
-  try {
-    const { error } = await indSupabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: window.location.href.split('#')[0], queryParams: { prompt: 'select_account' } }
+function updateUserUI(sessionOverride) {
+  const apply = (session) => {
+    const user = session?.user || null;
+    const nameEl = document.getElementById('userName');
+    const statusEl = document.getElementById('userStatus');
+    const avatarEl = document.getElementById('userAvatar');
+    const btnWrap = document.getElementById('authBtnContainer');
+    if (!nameEl || !statusEl || !avatarEl || !btnWrap) return;
+
+    if (user) {
+      const meta = user.user_metadata || {};
+      const email = user.email || '';
+      const name = meta.full_name || meta.name || (email ? email.split('@')[0] : 'Google User');
+      const avatar = meta.avatar_url || meta.picture || '';
+      nameEl.textContent = name;
+      statusEl.textContent = '✓ Gmail Login Active · 1 account';
+      let emailEl = document.getElementById('userEmailDisplay');
+      if (!emailEl) { emailEl = document.createElement('p'); emailEl.id = 'userEmailDisplay'; emailEl.style.cssText = 'margin:4px 0 0;color:var(--text-secondary);font-size:13px;overflow-wrap:anywhere'; statusEl.insertAdjacentElement('afterend', emailEl); }
+      emailEl.textContent = email;
+      avatarEl.textContent = '';
+      avatarEl.style.backgroundImage = '';
+      if (avatar) {
+        const img = document.createElement('img');
+        img.src = avatar;
+        img.alt = 'Google profile';
+        img.referrerPolicy = 'no-referrer';
+        img.style.cssText = 'width:100%;height:100%;object-fit:cover;border-radius:50%';
+        avatarEl.appendChild(img);
+      } else {
+        avatarEl.textContent = (name.trim()[0] || 'U').toUpperCase();
+      }
+      btnWrap.innerHTML = '<button class="indtube-logout-btn" type="button" onclick="handleIndTubeLogout()"><span aria-hidden="true">↪</span> Logout</button>';
+      removeDuplicateSignedInLabels();
+      requestAnimationFrame(removeDuplicateSignedInLabels);
+      setTimeout(removeDuplicateSignedInLabels, 120);
+    } else {
+      nameEl.textContent = 'User Account';
+      statusEl.textContent = 'Not Logged In';
+      document.getElementById('userEmailDisplay')?.remove();
+      avatarEl.textContent = 'U';
+      btnWrap.innerHTML = '<button class="google-login-btn" type="button" onclick="handleGoogleLogin()"><span style="font-size:20px;font-weight:bold;color:#4285F4">G</span> Sign in with Gmail</button>';
+    }
+  };
+
+  if (sessionOverride !== undefined) {
+    apply(sessionOverride);
+    return;
+  }
+  indSupabase.auth.getSession()
+    .then(({ data, error }) => {
+      if (error) throw error;
+      apply(data?.session || null);
+    })
+    .catch((error) => {
+      console.error('IndTube session check failed:', error);
+      const statusEl = document.getElementById('userStatus');
+      if (statusEl) statusEl.textContent = 'Login status check failed';
     });
-    if (error) alert('Google sign-in error: ' + error.message);
-  } catch (error) { alert('Google login shuru nahi ho paya: ' + (error.message || error)); }
 }
 
-async function handleGoogleLogout() {
-  if (!confirm('Kya aap IndTube se is Gmail account ko logout karna chahte hain?')) return;
+async function handleIndTubeLogout() {
   const { error } = await indSupabase.auth.signOut();
-  if (error) { alert('Logout nahi ho paya: ' + error.message); return; }
-  await updateUserUI(null);
-  alert('IndTube se logout ho gaya.');
+  if (error) {
+    alert('Logout nahi ho paya: ' + error.message);
+    return;
+  }
+  updateUserUI(null);
 }
 
-// Keep the You section updated after Google redirects back or the user logs out.
-indSupabase.auth.onAuthStateChange((_event, session) => {
-  setTimeout(() => updateUserUI(session), 0);
+indSupabase.auth.onAuthStateChange((event, session) => {
+  // Reflect sign-in, sign-out and refreshed sessions in the You page.
+  updateUserUI(session || null);
+  requestAnimationFrame(removeDuplicateSignedInLabels);
+  // Some older account UI fragments can render after the auth event; clean them too.
+  setTimeout(removeDuplicateSignedInLabels, 80);
+  setTimeout(removeDuplicateSignedInLabels, 300);
 });
+
+async function handleGoogleLogin() {
+  const { error } = await indSupabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: window.location.href.split('#')[0], queryParams: { prompt: 'select_account' } }
+  });
+  if (error) alert('Google sign-in error: ' + error.message + '. Supabase Authentication > Providers me Google enable karke Google OAuth credentials add karein.');
+}
 
 function isShortFiltered(item) {
   const id = getVideoId(item);
@@ -3535,7 +3611,10 @@ function likeShort(button) {
 }
 function focusShortComment() { openShortComments(); }
 function toggleShortRepost(button) { button.classList.toggle('active'); button.style.color = button.classList.contains('active') ? '#ff9933' : '#fff'; }
-function toggleShortSubscribe(button) { button.textContent = button.textContent === 'Subscribe' ? 'Subscribed' : 'Subscribe'; }
+async function toggleShortSubscribe(button) {
+  if (!(await requireIndTubeLoginForSubscribe())) return;
+  button.textContent = button.textContent === 'Subscribe' ? 'Subscribed' : 'Subscribe';
+}
 function saveCurrentShort() {
   const item = shortsList[shortsIndex]; if (!item) return;
   const id = getVideoId(item);
@@ -3680,11 +3759,20 @@ function closeShorts() {
 .you-identity .user-details p{margin:0;color:var(--text-secondary);font-size:13px}
 .you-text-link{padding:5px 0;border:0;background:none;color:var(--accent,#ff9d32);font-weight:600}
 #authBtnContainer .google-login-btn{width:100%;border-radius:24px;margin:0}
-.indtուբe-auth-card{padding:12px;border:1px solid var(--border);border-radius:12px;background:var(--surface)}
-.indtուբe-auth-email{font-size:12px;color:var(--text-secondary);margin-bottom:4px}
-.indtուբe-auth-address{font-size:14px;font-weight:600;overflow-wrap:anywhere;margin-bottom:10px}
-.indtուբe-logout-btn{border:1px solid #d9534f;background:transparent;color:#ff7772;border-radius:20px;padding:8px 18px;font-weight:600}
-#userStatus{white-space:pre-line;overflow-wrap:anywhere;line-height:1.5}
+#authBtnContainer .indtube-logout-btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:9px;
+  margin-top:14px;padding:11px 20px;min-width:132px;
+  border:1px solid rgba(255,255,255,.16);border-radius:999px;
+  background:linear-gradient(180deg,rgba(255,255,255,.13),rgba(255,255,255,.06));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 5px 18px rgba(0,0,0,.22);
+  color:#f5f5fa;font-size:14px;font-weight:650;letter-spacing:.15px;
+  cursor:pointer;backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+  transition:transform .18s ease,background .18s ease,border-color .18s ease
+}
+#authBtnContainer .indtube-logout-btn:active{
+  transform:scale(.96);background:rgba(255,255,255,.17);border-color:rgba(255,255,255,.28)
+}
+#userEmailDisplay{overflow-wrap:anywhere}
 .you-section-title{display:flex;justify-content:space-between;align-items:center;margin:18px 0 10px}
 .you-section-title button{border:0;background:none;color:var(--accent,#ff9d32)}
 .you-history-row{display:flex;gap:12px;align-items:center;overflow:auto;color:var(--text-secondary);font-size:13px}
@@ -3940,7 +4028,8 @@ function channelData(){try{return JSON.parse(localStorage.getItem('indtube_chann
 function saveChannelData(d){localStorage.setItem('indtube_channel_data',JSON.stringify(d))}
 function openMyChannel(){const d=channelData();document.getElementById('myChannelPage').style.display='block';document.getElementById('channelDisplayName').textContent=d.name||document.getElementById('userName')?.textContent||'Your channel';document.getElementById('channelHandle').textContent=(d.handle||'@yourhandle')+' · 0 subscribers · 0 videos';document.getElementById('channelDescription').textContent=d.description||'';const banner=localStorage.getItem('indtube_channel_banner');document.getElementById('channelBanner').style.backgroundImage=banner?'url('+banner+')':'';renderChannelAvatar();updateMyChannelSubscribeUI();loadChannelVideos('Videos')}
 function closeChannelPage(){document.getElementById('myChannelPage').style.display='none'}
-function toggleMyChannelSubscription(){
+async function toggleMyChannelSubscription(){
+  if (!(await requireIndTubeLoginForSubscribe())) return;
   const key='indtube_my_channel_subscribed';
   const subscribed=localStorage.getItem(key)==='true';
   const next=!subscribed;
@@ -4381,4 +4470,9 @@ document.addEventListener('DOMContentLoaded',()=>{const d=channelData();if(d.nam
  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',bind,{once:true}); else bind();
  const mo=new MutationObserver(bind);mo.observe(document.documentElement,{childList:true,subtree:true});
 })();
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => setTimeout(removeDuplicateSignedInLabels, 300));
+document.addEventListener('visibilitychange', () => { if (!document.hidden) setTimeout(removeDuplicateSignedInLabels, 250); });
 </script>

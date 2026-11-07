@@ -2440,7 +2440,7 @@ let selectedVideoFile = null;
 function openVideoUploadPage(){document.getElementById('videoUploadPage').style.display='block';selectedVideoFile=null;document.getElementById('selectedVideoName').textContent='No video selected';document.getElementById('uploadTitleInput').value='';document.getElementById('uploadDescriptionInput').value='';document.getElementById('uploadProgressText').textContent='';}
 function closeVideoUploadPage(){document.getElementById('videoUploadPage').style.display='none';}
 function handleFileSelected(e){const file=e.target.files?.[0];if(!file)return;if(!file.type.startsWith('video/')){alert('Video file select karein.');e.target.value='';return;}if(file.size>100*1024*1024){alert('Abhi upload ki limit 100 MB hai.');e.target.value='';return;}selectedVideoFile=file;document.getElementById('selectedVideoName').textContent=file.name;const t=document.getElementById('uploadTitleInput');if(!t.value)t.value=file.name.replace(/\.[^.]+$/,'');}
-async function publishSelectedVideo(){const file=selectedVideoFile,title=document.getElementById('uploadTitleInput').value.trim(),description=document.getElementById('uploadDescriptionInput').value.trim(),status=document.getElementById('uploadProgressText'),button=document.getElementById('publishVideoButton');if(!file){alert('Pehle video select karein.');return;}if(!title){alert('Video ka title likhein.');return;}button.disabled=true;status.textContent='Account check ho raha hai...';try{const session=await getIndTubeSession();if(!session)return;const safeName=file.name.replace(/[^a-zA-Z0-9._-]/g,'_').slice(-100)||'video.mp4',objectPath=`${session.user.id}/${Date.now()}_${safeName}`;status.textContent='Video upload ho raha hai...';const {error:uploadError}=await indSupabase.storage.from('videos').upload(objectPath,file,{cacheControl:'3600',upsert:false,contentType:file.type});if(uploadError)throw uploadError;const {data:publicData}=indSupabase.storage.from('videos').getPublicUrl(objectPath);const {error:insertError}=await indSupabase.from('videos').insert({user_id:session.user.id,title,description,video_url:publicData.publicUrl,thumbnail_url:'',video_type:selectedUploadType||'Long Video',status:'published'});if(insertError){await indSupabase.storage.from('videos').remove([objectPath]);throw insertError;}status.textContent='Upload complete';alert('Video IndTube par upload ho gaya!');closeVideoUploadPage();await renderMyUploads();}catch(err){status.textContent='Upload failed';alert('Upload nahi ho paya: '+(err.message||'Supabase error'));}finally{button.disabled=false;}}
+async function publishSelectedVideo(){const file=selectedVideoFile,title=document.getElementById('uploadTitleInput').value.trim(),description=document.getElementById('uploadDescriptionInput').value.trim(),status=document.getElementById('uploadProgressText'),button=document.getElementById('publishVideoButton');if(!file){alert('Pehle video select karein.');return;}if(!title){alert('Video ka title likhein.');return;}button.disabled=true;status.textContent='Account check ho raha hai...';try{const session=await getIndTubeSession();if(!session)return;const safeName=file.name.replace(/[^a-zA-Z0-9._-]/g,'_').slice(-100)||'video.mp4',objectPath=`${session.user.id}/${Date.now()}_${safeName}`;status.textContent='Video upload ho raha hai...';const {error:uploadError}=await indSupabase.storage.from('videos').upload(objectPath,file,{cacheControl:'3600',upsert:false,contentType:file.type});if(uploadError)throw uploadError;const {data:publicData}=indSupabase.storage.from('videos').getPublicUrl(objectPath);const {error:insertError}=await indSupabase.from('videos').insert({user_id:session.user.id,title,description,video_url:publicData.publicUrl,thumbnail_url:'',video_type:(String(selectedUploadType||'long').toLowerCase().includes('short')?'short':'long'),status:'published'});if(insertError){await indSupabase.storage.from('videos').remove([objectPath]);throw insertError;}status.textContent='Upload complete';alert('Video IndTube par upload ho gaya!');closeVideoUploadPage();await renderMyUploads();}catch(err){status.textContent='Upload failed';alert('Upload nahi ho paya: '+(err.message||'Supabase error'));}finally{button.disabled=false;}}
 function openMyUploads(){document.getElementById('myVideosPage').style.display='block';renderMyUploads();}
 function closeMyVideosPage(){document.getElementById('myVideosPage').style.display='none';}
 function handleAvatarPicked(e){const file=e.target.files?.[0];if(!file)return;if(!file.type.startsWith('image/')){alert('Image select karein.');return;}if(file.size>2*1024*1024){alert('Logo 2 MB se chhota hona chahiye.');return;}const r=new FileReader();r.onload=()=>{try{localStorage.setItem('indtube_profile_logo',r.result);renderProfileLogo();}catch(_){alert('Image save nahi ho payi. Chhoti image try karein.');}};r.readAsDataURL(file);e.target.value='';}
@@ -3262,31 +3262,36 @@ function applySettingsToUI() {
 }
 function removeDuplicateSignedInLabels() {
   const primaryEmailEl = document.getElementById('userEmailDisplay');
-  const primaryEmail = (primaryEmailEl?.textContent || '').replace(/\s+/g, ' ').trim().toLowerCase();
-  const youPage = document.getElementById('youSection') || document;
+  const primaryEmail = (primaryEmailEl?.textContent || '').trim().toLowerCase();
 
-  // Remove any legacy "Signed in as" label and its immediately-following email.
-  for (const el of Array.from(youPage.querySelectorAll('*'))) {
-    if (!el.isConnected || el === primaryEmailEl || el.contains(primaryEmailEl)) continue;
+  // The canonical email is the one directly below the Gmail Login Active status.
+  // Remove any old "Signed in as" block anywhere else on the You page.
+  const youPage = document.getElementById('youSection') || document;
+  const candidates = Array.from(youPage.querySelectorAll('p,div,span,label,strong'));
+  for (const el of candidates) {
+    if (!el.isConnected || el === primaryEmailEl) continue;
     const text = (el.textContent || '').replace(/\s+/g, ' ').trim();
-    if (/^Signed in as:?$/i.test(text) && el.children.length === 0) {
-      const next = el.nextElementSibling;
-      el.remove();
-      if (next && next !== primaryEmailEl &&
+    if (/^Signed in as:?$/i.test(text)) {
+      const wrapper = el.parentElement && el.parentElement !== youPage &&
+        el.parentElement.children.length <= 2 ? el.parentElement : el;
+      const next = wrapper.nextElementSibling;
+      wrapper.remove();
+      if (next && next !== primaryEmailEl && primaryEmail &&
           (next.textContent || '').replace(/\s+/g, ' ').trim().toLowerCase() === primaryEmail) {
         next.remove();
       }
     }
   }
 
-  // Keep exactly one email line: the canonical one below "Gmail Login Active".
+  // Remove duplicate email-only nodes, preserving the canonical status email.
   if (primaryEmail) {
-    const matches = Array.from(youPage.querySelectorAll('*'))
-      .filter(el => el !== primaryEmailEl &&
-        !el.contains(primaryEmailEl) &&
-        el.children.length === 0 &&
-        (el.textContent || '').replace(/\s+/g, ' ').trim().toLowerCase() === primaryEmail);
-    matches.forEach(el => el.remove());
+    for (const el of Array.from(youPage.querySelectorAll('p,div,span,label'))) {
+      if (!el.isConnected || el === primaryEmailEl || el.contains(primaryEmailEl)) continue;
+      if (el.children.length === 0 &&
+          (el.textContent || '').replace(/\s+/g, ' ').trim().toLowerCase() === primaryEmail) {
+        el.remove();
+      }
+    }
   }
 }
 
@@ -3363,9 +3368,6 @@ indSupabase.auth.onAuthStateChange((event, session) => {
   // Reflect sign-in, sign-out and refreshed sessions in the You page.
   updateUserUI(session || null);
   requestAnimationFrame(removeDuplicateSignedInLabels);
-  // Some older account UI fragments can render after the auth event; clean them too.
-  setTimeout(removeDuplicateSignedInLabels, 80);
-  setTimeout(removeDuplicateSignedInLabels, 300);
 });
 
 async function handleGoogleLogin() {

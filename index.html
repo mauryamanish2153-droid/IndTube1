@@ -357,9 +357,23 @@ input:checked + .slider:before { transform: translateX(18px); }
 .shorts-iframe-box iframe { width:100%; height:100%; border:0; }
 .shorts-topbar { position:absolute; z-index:12; top: max(12px, env(safe-area-inset-top)); left:12px; }
 .shorts-back-btn { width:42px; height:42px; border:0; border-radius:50%; color:#fff; background:rgba(0,0,0,.38); font-size:27px; display:grid; place-items:center; cursor:pointer; }
-.shorts-actions-bar { position:absolute; right:10px; bottom:105px; display:flex; flex-direction:column; gap:13px; align-items:center; z-index:12; }
-.short-action-btn { background:transparent; border:0; color:#fff; min-width:48px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; font-size:27px; text-shadow:0 1px 5px #000; cursor:pointer; padding:2px; }
+.shorts-actions-bar { position:absolute; right:10px; bottom:105px; display:flex; flex-direction:column; gap:22px; align-items:center; z-index:12; }
+.short-action-btn { background:transparent; border:0; color:#fff; min-width:52px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; font-size:27px; text-shadow:0 1px 5px #000; cursor:pointer; padding:4px 2px; }
 .short-action-btn span { font-size:12px; font-weight:600; text-shadow:0 1px 5px #000; }
+.short-action-btn .short-action-icon {
+  width:25px; height:25px; display:block; flex:0 0 25px;
+  fill:none; stroke:currentColor; stroke-width:1.9;
+  stroke-linecap:round; stroke-linejoin:round;
+  filter:drop-shadow(0 1px 3px rgba(0,0,0,.9));
+}
+.short-action-btn:active { transform:scale(.92); }
+.short-action-btn.is-liked { color:#3ea6ff !important; }
+.short-action-btn.is-disliked { color:#ff7b7b !important; }
+.short-action-btn.is-disliked .dislike-icon path { fill:#ff7b7b; stroke:#ff7b7b; }
+.short-action-btn.is-liked .like-icon path { fill:#3ea6ff; stroke:#3ea6ff; }
+.short-action-btn.is-saved { color:#ffad55 !important; }
+@media(max-width:600px){.shorts-actions-bar{gap:16px}.short-action-btn .short-action-icon{width:26px;height:26px;flex-basis:26px}}
+
 .shorts-bottom-info { position:absolute; left:16px; right:76px; bottom:18px; z-index:11; color:#fff; text-shadow:0 1px 5px #000; }
 .shorts-creator-row { display:flex; align-items:center; gap:9px; margin-bottom:10px; }
 .shorts-avatar { width:38px; height:38px; border-radius:50%; background:linear-gradient(135deg,#ff9933,#fff,#138808); color:#111; display:grid; place-items:center; font-weight:800; text-shadow:none; flex-shrink:0; }
@@ -383,7 +397,7 @@ input:checked + .slider:before { transform: translateX(18px); }
 
 
 /* Reels-style more menu */
-.short-more-wrap{position:absolute;right:14px;bottom:18px;z-index:18}
+.short-more-wrap{position:absolute;right:10px;bottom:88px;z-index:18}
 .short-more-btn{width:46px;height:42px;border:0;border-radius:22px;background:rgba(25,25,25,.72);color:#fff;font-size:29px;line-height:1;letter-spacing:1px;display:grid;place-items:center;cursor:pointer;text-shadow:0 1px 5px #000}
 .short-more-menu{display:none;position:absolute;right:0;bottom:50px;width:min(260px,calc(100vw - 40px));padding:7px;background:#202020;border:1px solid #444;border-radius:15px;box-shadow:0 8px 28px #000b;color:#fff}
 .short-more-menu.open{display:block}
@@ -1106,6 +1120,28 @@ function indTubeIsSafeVideoItem(item) {
 #indtubePlayerSettingsMenu button:active, #indtubePlayerSettingsMenu button.active { background:#555; }
 </style>
 
+
+<style id="indtube-shorts-clean-player-fix">
+/* Shorts: hide YouTube's native control strip (CC, settings and player menu). */
+#shortsIframeContainer iframe { pointer-events:none !important; }
+.shorts-iframe-box { z-index:1; }
+#shortsGestureZone { z-index:8 !important; }
+.shorts-topbar, .shorts-actions-bar, .shorts-bottom-info { z-index:12; }
+#indtubeShortsPlayPause {
+  position:absolute; z-index:14; left:50%; top:50%;
+  transform:translate(-50%,-50%); width:68px; height:68px;
+  border:1px solid rgba(255,255,255,.35); border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  color:#fff; background:rgba(0,0,0,.48); padding:0;
+  cursor:pointer; pointer-events:auto; backdrop-filter:blur(3px);
+  -webkit-backdrop-filter:blur(3px); text-shadow:0 2px 8px #000;
+}
+#indtubeShortsPlayPause svg { width:30px;height:30px;fill:#fff;display:block; }
+#indtubeShortsPlayPause:active { transform:translate(-50%,-50%) scale(.93); }
+#indtubeShortsPlayPause.is-playing { opacity:.72; }
+@media(max-width:600px){#indtubeShortsPlayPause{width:62px;height:62px}}
+</style>
+
 </head>
 <body>
 
@@ -1432,29 +1468,49 @@ function indTubeIsSafeVideoItem(item) {
 <div class="shorts-viewer" id="shortsViewer">
   <div class="shorts-stage">
     <div class="shorts-iframe-box" id="shortsIframeContainer"></div>
+    <div class="indtube-yt-ui-mask" aria-hidden="true">
+      <span class="indtube-mask-top"></span>
+      <span class="indtube-mask-bottom-left"></span>
+      <span class="indtube-mask-bottom-right"></span>
+    </div>
+    <button id="indtubeShortsPlayPause" type="button" aria-label="Pause video" onclick="toggleIndTubeShortsPlayback()">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg>
+    </button>
     <div class="shorts-topbar"><button class="shorts-back-btn" onclick="closeShorts()" aria-label="Back">‹</button></div>
     <div id="shortsGestureZone" aria-label="Swipe here to move to the next Short" title="Swipe up for next Short"></div>
     <div class="shorts-actions-bar">
-      <button class="short-action-btn" id="shortLikeBtn" onclick="likeShort(this)">♡<span>Like</span></button>
-      <button class="short-action-btn" id="shortCommentBtn" onclick="openShortComments()">💬<span>Comment</span></button>
-      <button class="short-action-btn" onclick="shareVideo()">➤<span>Share</span></button>
-      <button class="short-action-btn" id="shortSaveBtn" onclick="saveCurrentShort()">▱<span>Save</span></button>
+      <button class="short-action-btn" id="shortLikeBtn" type="button" onclick="likeShort(this)" aria-label="Like">
+        <svg class="short-action-icon like-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10v11H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3Zm0 0 5-8c1.8 0 2.8 1.5 2.3 3.2L13 10h5.7a2 2 0 0 1 2 2.4l-1.5 7a2 2 0 0 1-2 1.6H7"/></svg><span>Like</span>
+      </button>
+      <button class="short-action-btn" id="shortDislikeBtn" type="button" onclick="dislikeShort(this)" aria-label="Dislike">
+        <svg class="short-action-icon dislike-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 14V3h3a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-3Zm0 0-5 8c-1.8 0-2.8-1.5-2.3-3.2L11 14H5.3a2 2 0 0 1-2-2.4l1.5-7a2 2 0 0 1 2-1.6H17"/></svg><span>Dislike</span>
+      </button>
+      <button class="short-action-btn" id="shortCommentBtn" type="button" onclick="openShortComments()" aria-label="Comments">
+        <svg class="short-action-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11.5a7.5 7.5 0 0 1-7.5 7.5H7l-4 2v-6.5A7.5 7.5 0 1 1 20 11.5Z"/></svg><span>Comment</span>
+      </button>
+      <button class="short-action-btn" id="shortShareBtn" type="button" onclick="shareCurrentShortIndTube()" aria-label="Share">
+        <svg class="short-action-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.7 10.7 6.6-4.4M8.7 13.3l6.6 4.4"/></svg><span>Share</span>
+      </button>
+      <button class="short-action-btn" id="shortSaveBtn" type="button" onclick="saveCurrentShort()" aria-label="Save">
+        <svg class="short-action-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h14v18l-7-4-7 4V3Z"/></svg><span>Save</span>
+      </button>
+      <button class="short-action-btn" id="shortMoreBtn" type="button" onclick="toggleShortMoreMenu(event)" aria-label="More options" aria-expanded="false">
+        <svg class="short-action-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="1.5" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="12" cy="19" r="1.5" fill="currentColor" stroke="none"/></svg><span>More</span>
+      </button>
     </div>
-    <div class="short-more-wrap">
-      <button class="short-more-btn" type="button" id="shortMoreBtn" onclick="toggleShortMoreMenu(event)" aria-label="More options" aria-expanded="false">•••</button>
-      <div class="short-more-menu" id="shortMoreMenu" role="menu" aria-label="Short options">
-        <button type="button" role="menuitem" onclick="shortPreference('interested')"><span class="mi">👍</span><span>Interested</span></button>
-        <button type="button" role="menuitem" onclick="shortPreference('notInterested')"><span class="mi">👎</span><span>Not interested</span></button>
-        <button type="button" role="menuitem" onclick="shortPreference('dontRecommend')"><span class="mi">🚫</span><span>Don't recommend this channel</span></button>
+    <div class="short-more-wrap" id="shortMoreWrap">
+      <div class="short-more-menu" id="shortMoreMenu">
+        <button type="button" onclick="markShortPreference('interested')"><span class="mi">✓</span>Interested</button>
+        <button type="button" onclick="markShortPreference('notInterested')"><span class="mi">−</span>Not interested</button>
+        <button type="button" onclick="hideShortChannel()"><span class="mi">⊘</span>Hide this channel</button>
         <div class="short-more-divider"></div>
-        <button type="button" role="menuitem" onclick="reportCurrentShort()"><span class="mi">⚑</span><span>Report</span></button>
-        <button type="button" role="menuitem" onclick="copyCurrentShortLink()"><span class="mi">🔗</span><span>Copy link</span></button>
-        <button type="button" role="menuitem" onclick="saveCurrentShort(); closeShortMoreMenu()"><span class="mi">▣</span><span>Save / Remove from saved</span></button>
+        <button type="button" onclick="reportCurrentShort()"><span class="mi">⚑</span>Report</button>
+        <button type="button" onclick="copyCurrentShortLink()"><span class="mi">⧉</span>Copy link</button>
       </div>
     </div>
-    <div id="shortMoreToast" role="status" aria-live="polite"></div>
     <div class="shorts-bottom-info">
       <div class="shorts-creator-row">
+        <span class="indtube-short-avatar" aria-hidden="true">I</span>
         <span class="shorts-creator-name" id="shortsCreatorName">IndTube Creator</span>
         <button class="shorts-follow-btn" id="shortsFollowBtn" onclick="toggleShortSubscribe(this)">Subscribe</button>
       </div>
@@ -3602,16 +3658,44 @@ function submitShortComment() {
   input.value = '';
   renderShortComments();
 }
-function likeShort(button) {
+
+async function shareCurrentShortIndTube() {
   const id = getCurrentShortId();
   if (!id) return;
-  const all = safeLoad('indtube_shorts_likes', {});
-  shortsLiked = !all[id];
-  if (shortsLiked) all[id] = true; else delete all[id];
-  persist('indtube_shorts_likes', all);
-  button.innerHTML = `${shortsLiked ? '♥' : '♡'}<span>Like</span>`;
-  button.style.color = shortsLiked ? '#ff4d6d' : '#fff';
+  const url = `https://www.youtube.com/shorts/${encodeURIComponent(id)}`;
+  try {
+    if (navigator.share) await navigator.share({ title: 'IndTube Short', url });
+    else if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(url);
+      shortMoreToast('Short link copied');
+    } else {
+      prompt('Copy this Short link:', url);
+    }
+  } catch (error) {
+    if (error?.name !== 'AbortError') prompt('Copy this Short link:', url);
+  }
 }
+
+function setShortReaction(reaction) {
+  const id = getCurrentShortId();
+  if (!id) return;
+  const all = safeLoad('indtube_shorts_reactions', {});
+  const next = all[id] === reaction ? '' : reaction;
+  if (next) all[id] = next; else delete all[id];
+  persist('indtube_shorts_reactions', all);
+  // Keep the legacy likes store in sync for existing IndTube screens.
+  const likes = safeLoad('indtube_shorts_likes', {});
+  if (next === 'like') likes[id] = true; else delete likes[id];
+  persist('indtube_shorts_likes', likes);
+  const likeBtn = document.getElementById('shortLikeBtn');
+  const dislikeBtn = document.getElementById('shortDislikeBtn');
+  if (likeBtn) likeBtn.classList.toggle('is-liked', next === 'like');
+  if (dislikeBtn) dislikeBtn.classList.toggle('is-disliked', next === 'dislike');
+  shortsLiked = next === 'like';
+}
+function likeShort() { setShortReaction('like'); }
+function dislikeShort() { setShortReaction('dislike'); }
+
 function focusShortComment() { openShortComments(); }
 function toggleShortRepost(button) { button.classList.toggle('active'); button.style.color = button.classList.contains('active') ? '#ff9933' : '#fff'; }
 async function toggleShortSubscribe(button) {
@@ -3626,17 +3710,179 @@ function saveCurrentShort() {
   if (index >= 0) list.splice(index,1); else list.push({id, snippet:item.snippet});
   persist('indtube_saved_shorts', list);
   closeShortMoreMenu();
-  const btn = document.getElementById('shortSaveBtn'); if (btn) btn.innerHTML = `${index >= 0 ? '▱' : '▣'}<span>${index >= 0 ? 'Save' : 'Saved'}</span>`;
+  const btn = document.getElementById('shortSaveBtn');
+  if (btn) {
+    btn.classList.toggle('is-saved', index < 0);
+    btn.innerHTML = `<svg class="short-action-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 3h14v18l-7-4-7 4V3Z"/></svg><span>${index >= 0 ? 'Save' : 'Saved'}</span>`;
+  }
 }
 function getFriendlyApiError(error) { return explainApiError(error); }
+
+
+/* Instagram-style Shorts deck: keep the next iframe loaded before the swipe. */
+let indTubeShortSlots = [];
+let indTubeActiveShortSlot = -1;
+let indTubeShortSlotIds = ['', ''];
+let indTubeShortDeckOrigin = '';
+let indTubeShortDeckReferrer = '';
+
+function ensureIndTubeShortSlots() {
+  const host = document.getElementById('shortsIframeContainer');
+  if (!host) return false;
+  if (indTubeShortSlots.length === 2 && indTubeShortSlots.every(x => x?.isConnected)) return true;
+  host.innerHTML = '';
+  indTubeShortSlots = [];
+  indTubeShortSlotIds = ['', ''];
+  indTubeActiveShortSlot = -1;
+  for (let i = 0; i < 2; i++) {
+    const frame = document.createElement('iframe');
+    frame.className = 'indtube-short-slot';
+    frame.dataset.slot = String(i);
+    frame.title = i === 0 ? 'Current Short' : 'Preloaded next Short';
+    frame.referrerPolicy = 'origin';
+    frame.allow = 'autoplay; encrypted-media; picture-in-picture';
+    frame.allowFullscreen = true;
+    frame.loading = 'eager';
+    frame.setAttribute('playsinline', '');
+    host.appendChild(frame);
+    indTubeShortSlots.push(frame);
+  }
+  return true;
+}
+
+function indTubeShortEmbedUrl(id, muted) {
+  return `https://www.youtube.com/embed/${encodeURIComponent(id)}?autoplay=1&mute=${muted ? 1 : 0}&playsinline=1&loop=1&playlist=${encodeURIComponent(id)}&rel=0&controls=0&disablekb=1&fs=0&iv_load_policy=3&enablejsapi=1${indTubeShortDeckOrigin}&widget_referrer=${indTubeShortDeckReferrer}`;
+}
+
+function loadIndTubeShortSlot(slot, id, muted) {
+  const frame = indTubeShortSlots[slot];
+  if (!frame || !id) return;
+  if (indTubeShortSlotIds[slot] === id && frame.src) return;
+  try {
+    frame.contentWindow?.postMessage(JSON.stringify({event:'command',func:'pauseVideo',args:[]}), '*');
+  } catch (_) {}
+  indTubeShortSlotIds[slot] = id;
+  frame.src = indTubeShortEmbedUrl(id, muted);
+}
+
+function commandIndTubeShortFrame(frame, func) {
+  if (!frame?.contentWindow) return;
+  try { frame.contentWindow.postMessage(JSON.stringify({event:'command',func,args:[]}), '*'); } catch (_) {}
+}
+
+// A promoted preloaded Short must be unmuted and started as soon as it becomes active.
+// Retry briefly because YouTube's iframe player can finish initializing after the swipe.
+function startIndTubeShortWithSound(slot) {
+  const frame = indTubeShortSlots[slot];
+  if (!frame) return;
+  let attempts = 0;
+  const sendAudioCommands = () => {
+    if (indTubeActiveShortSlot !== slot || !frame.isConnected) return;
+    attempts++;
+    try {
+      // Commands are sent to the existing player; never change frame.src here.
+      frame.contentWindow?.postMessage(JSON.stringify({event:'command',func:'unMute',args:[]}), '*');
+      frame.contentWindow?.postMessage(JSON.stringify({event:'command',func:'setVolume',args:[100]}), '*');
+      frame.contentWindow?.postMessage(JSON.stringify({event:'command',func:'playVideo',args:[]}), '*');
+    } catch (_) {}
+    if (attempts < 16) setTimeout(sendAudioCommands, 350);
+  };
+  // Wait for the iframe's player document, then retry while it initializes.
+  frame.addEventListener('load', sendAudioCommands, { once:true });
+  sendAudioCommands();
+}
+
+function kickIndTubeShortAudioFromGesture() {
+  const frame = indTubeShortSlots[indTubeActiveShortSlot];
+  if (!frame?.contentWindow) return;
+  // Send sound/play commands immediately inside the user's swipe gesture.
+  // This gives mobile browsers the best chance to allow audible playback.
+  for (const func of ['unMute', 'setVolume', 'playVideo']) {
+    try { frame.contentWindow.postMessage(JSON.stringify({event:'command',func,args:func==='setVolume'?[100]:[]}), '*'); } catch (_) {}
+  }
+  setIndTubeShortsPauseUI(false);
+}
+
+function activateIndTubeShort(id, origin, referrer) {
+  if (!ensureIndTubeShortSlots()) return;
+  indTubeShortDeckOrigin = origin || '';
+  indTubeShortDeckReferrer = referrer || '';
+  let slot = indTubeShortSlotIds.indexOf(id);
+  if (slot < 0) {
+    slot = indTubeActiveShortSlot === 0 ? 1 : 0;
+    loadIndTubeShortSlot(slot, id, false);
+  } else if (slot !== indTubeActiveShortSlot) {
+    // Keep the already-buffered iframe. Reloading it here causes a black flash
+    // on mobile while YouTube rebuilds the player. Unmute it in-place instead.
+    commandIndTubeShortFrame(indTubeShortSlots[indTubeActiveShortSlot], 'pauseVideo');
+  }
+
+  const oldSlot = indTubeActiveShortSlot;
+  // Animate the whole Short in the swipe direction (next rises, previous descends).
+  const swipeDirection = window.indTubeShortDirection === 'down' ? 'down' : 'up';
+  const shortContainer = document.getElementById('shortsIframeContainer');
+  if (shortContainer) shortContainer.dataset.swipeDirection = swipeDirection;
+  document.documentElement.dataset.shortDirection = swipeDirection;
+  if (oldSlot >= 0 && oldSlot !== slot) {
+    const outgoing = indTubeShortSlots[oldSlot];
+    outgoing.classList.remove('is-active', 'is-preloaded', 'is-entering-bottom');
+    outgoing.classList.add(swipeDirection === 'down' ? 'is-exiting-bottom' : 'is-exiting-top');
+    outgoing.style.zIndex = '3';
+    setTimeout(() => {
+      if (outgoing.isConnected) {
+        outgoing.classList.remove('is-exiting-top', 'is-exiting-bottom');
+        outgoing.classList.add('is-preloaded');
+        outgoing.style.zIndex = '1';
+      }
+    }, 340);
+  }
+  indTubeActiveShortSlot = slot;
+  const incoming = indTubeShortSlots[slot];
+  incoming.classList.remove('is-preloaded', 'is-exiting-top', 'is-exiting-bottom', 'is-entering-bottom', 'is-entering-top');
+  incoming.classList.add(swipeDirection === 'down' ? 'is-entering-top' : 'is-entering-bottom');
+  // Force the starting position to be applied before transitioning to the screen.
+  incoming.style.zIndex = '2';
+  void incoming.offsetHeight;
+  requestAnimationFrame(() => {
+    if (indTubeActiveShortSlot === slot) {
+      incoming.classList.remove('is-entering-bottom', 'is-entering-top');
+      incoming.classList.add('is-active');
+    }
+  });
+  indTubeShortSlots.forEach((frame, i) => {
+    if (i !== slot && i !== oldSlot) {
+      frame.classList.remove('is-active', 'is-exiting-top', 'is-entering-bottom');
+      frame.classList.add('is-preloaded');
+      frame.style.zIndex = '1';
+    }
+  });
+  if (oldSlot !== slot) {
+    setIndTubeShortsPauseUI(false);
+    // Preloaded players start muted; immediately enable sound on promotion.
+    startIndTubeShortWithSound(slot);
+  }
+
+  // Prepare the next item while the current one is already visible.
+  const nextItem = shortsList[shortsIndex + 1];
+  const nextId = nextItem ? getVideoId(nextItem) : '';
+  if (nextId) {
+    const preloadSlot = slot === 0 ? 1 : 0;
+    if (indTubeShortSlotIds[preloadSlot] !== nextId) {
+      loadIndTubeShortSlot(preloadSlot, nextId, true);
+    }
+  }
+}
 
 function showCurrentShort() {
   const item = shortsList[shortsIndex];
   if (!item) return;
   const id = getVideoId(item);
-  shortsLiked = !!safeLoad('indtube_shorts_likes', {})[id];
+  const savedReaction = safeLoad('indtube_shorts_reactions', {})[id] || (safeLoad('indtube_shorts_likes', {})[id] ? 'like' : '');
+  shortsLiked = savedReaction === 'like';
   const likeBtn = document.getElementById('shortLikeBtn');
-  if (likeBtn) { likeBtn.innerHTML = `${shortsLiked ? '♥' : '♡'}<span>Like</span>`; likeBtn.style.color = shortsLiked ? '#ff4d6d' : '#fff'; }
+  const dislikeBtn = document.getElementById('shortDislikeBtn');
+  if (likeBtn) likeBtn.classList.toggle('is-liked', savedReaction === 'like');
+  if (dislikeBtn) dislikeBtn.classList.toggle('is-disliked', savedReaction === 'dislike');
   closeShortComments();
   closeShortMoreMenu();
   const creatorName = item.snippet?.channelTitle || 'IndTube Creator';
@@ -3674,25 +3920,58 @@ function showCurrentShort() {
   const shortsOrigin = (location.protocol === 'http:' || location.protocol === 'https:')
     ? `&origin=${encodeURIComponent(location.origin)}` : '';
   const shortsReferrer = encodeURIComponent(location.href || '');
-  document.getElementById('shortsIframeContainer').innerHTML =
-    `<iframe src="https://www.youtube.com/embed/${encodeURIComponent(id)}?autoplay=1&playsinline=1&rel=0&controls=1&enablejsapi=1${shortsOrigin}&widget_referrer=${shortsReferrer}"
-      referrerpolicy="origin" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen title="Short"></iframe>`;
+  activateIndTubeShort(id, shortsOrigin, shortsReferrer);
 }
 
+
+let indTubeShortsPaused = false;
+function setIndTubeShortsPauseUI(paused) {
+  indTubeShortsPaused = !!paused;
+  const btn = document.getElementById('indtubeShortsPlayPause');
+  if (!btn) return;
+  btn.setAttribute('aria-label', paused ? 'Play video' : 'Pause video');
+  btn.innerHTML = paused
+    ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>'
+    : '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg>';
+  btn.classList.toggle('is-playing', !paused);
+}
+function toggleIndTubeShortsPlayback() {
+  const frame = indTubeShortSlots[indTubeActiveShortSlot] || document.querySelector('#shortsIframeContainer iframe.is-active');
+  if (!frame?.contentWindow) return;
+  const command = indTubeShortsPaused ? 'playVideo' : 'pauseVideo';
+  try {
+    frame.contentWindow.postMessage(JSON.stringify({event:'command',func:command,args:[]}), '*');
+    setIndTubeShortsPauseUI(!indTubeShortsPaused);
+  } catch (e) { console.warn('Shorts playback control unavailable', e); }
+}
+
+let indTubeShortNavigationBusy = false;
+window.indTubeShortDirection = 'up';
 async function nextShort() {
-  if (shortsIndex >= shortsList.length - 1) {
-    await loadMoreShorts();
-  }
-  if (shortsIndex < shortsList.length - 1) {
-    shortsIndex++;
-    showCurrentShort();
+  if (indTubeShortNavigationBusy) return;
+  indTubeShortNavigationBusy = true;
+  window.indTubeShortDirection = 'up';
+  try {
+    if (shortsIndex >= shortsList.length - 1) await loadMoreShorts();
+    if (shortsIndex < shortsList.length - 1) {
+      shortsIndex++;
+      showCurrentShort();
+    }
+  } catch (error) {
+    console.warn('Could not load next Short', error);
+  } finally {
+    setTimeout(() => { indTubeShortNavigationBusy = false; }, 650);
   }
 }
 
 function previousShort() {
+  if (indTubeShortNavigationBusy) return;
   if (shortsIndex > 0) {
+    window.indTubeShortDirection = 'down';
+    indTubeShortNavigationBusy = true;
     shortsIndex--;
     showCurrentShort();
+    setTimeout(() => { indTubeShortNavigationBusy = false; }, 650);
   }
 }
 
@@ -3729,20 +4008,23 @@ function previousShort() {
     const touch = event.changedTouches[0];
     const dx = touch.clientX - startX;
     const dy = touch.clientY - startY;
-    if (Math.abs(dy) > 40 && Math.abs(dy) > Math.abs(dx) * 1.15) {
-      if (dy < 0) await nextShort(); // Swipe up = next Short
-      else previousShort();          // Swipe down = previous Short
+    if (Math.abs(dy) > 78 && Math.abs(dy) > Math.abs(dx) * 1.25) {
+      if (dy < 0) { window.indTubeShortDirection='up'; void nextShort(); }
+      else { window.indTubeShortDirection='down'; previousShort(); }
+      // Do not await navigation before this: mobile autoplay permission is gesture-bound.
+      kickIndTubeShortAudioFromGesture();
     }
   }, { passive: true });
 
   // Desktop testing: mouse wheel also advances the feed.
   let wheelLock = false;
   stage.addEventListener('wheel', async event => {
-    if (wheelLock || Math.abs(event.deltaY) < 25) return;
+    if (wheelLock || Math.abs(event.deltaY) < 55) return;
     wheelLock = true;
-    if (event.deltaY > 0) await nextShort();
-    else previousShort();
-    setTimeout(() => { wheelLock = false; }, 450);
+    if (event.deltaY > 0) { window.indTubeShortDirection='up'; void nextShort(); }
+    else { window.indTubeShortDirection='down'; previousShort(); }
+    kickIndTubeShortAudioFromGesture();
+    setTimeout(() => { wheelLock = false; }, 520);
   }, { passive: true });
 })();
 
@@ -4488,6 +4770,150 @@ document.addEventListener('DOMContentLoaded',()=>{const d=channelData();if(d.nam
 @media(hover:hover){#mainPlayerContainer .indtube-tricolor-seek{height:25px!important;}#mainPlayerContainer .indtube-tricolor-seek:hover .indtube-tricolor-track{height:6px!important;}}
 </style>
 
+
+<style id="indtube-instant-shorts-preload-fix">
+#shortsIframeContainer { position:absolute; inset:0; overflow:hidden; background:#000; isolation:isolate; }
+#shortsIframeContainer iframe.indtube-short-slot {
+  position:absolute; inset:0; width:100%; height:100%; border:0;
+  opacity:1; transform:translate3d(0, 100%, 0);
+  transition:transform .28s cubic-bezier(.18,.78,.22,1);
+  will-change:transform; pointer-events:none; backface-visibility:hidden;
+  transform-origin:50% 50%; contain:layout paint;
+}
+#shortsIframeContainer iframe.indtube-short-slot.is-preloaded {
+  opacity:1; transform:translate3d(0,100%,0); z-index:1;
+}
+#shortsIframeContainer iframe.indtube-short-slot.is-entering-bottom {
+  opacity:1; transform:translate3d(0,100%,0); z-index:2;
+}
+#shortsIframeContainer iframe.indtube-short-slot.is-active {
+  opacity:1; transform:translate3d(0,0,0); z-index:2;
+}
+#shortsIframeContainer iframe.indtube-short-slot.is-exiting-top {
+  opacity:1; transform:translate3d(0,-100%,0); z-index:3;
+}
+@media (prefers-reduced-motion: reduce) {
+  #shortsIframeContainer iframe.indtube-short-slot { transition:none; }
+}
+</style>
+
+
+<style id="indtube-instagram-short-ui-motion-fix">
+/* Pause/play glyph stays hidden until the viewer taps the Short. */
+#indtubeShortsPlayPause{opacity:0!important;visibility:hidden!important;pointer-events:none!important;transform:translate(-50%,-42%) scale(.86)!important;transition:opacity .18s ease,transform .18s ease,visibility .18s!important;}
+#indtubeShortsPlayPause.indtube-pause-visible{opacity:1!important;visibility:visible!important;pointer-events:auto!important;transform:translate(-50%,-50%) scale(1)!important;}
+#indtubeShortsPlayPause.is-playing{opacity:0!important;}
+#indtubeShortsPlayPause.indtube-pause-visible.is-playing{opacity:1!important;}
+@keyframes indTubeShortUiRise{0%{opacity:0;transform:translate3d(0,42px,0)}65%{opacity:1}100%{opacity:1;transform:translate3d(0,0,0)}}
+@keyframes indTubeShortTopRise{0%{opacity:0;transform:translate3d(0,-12px,0)}100%{opacity:1;transform:translate3d(0,0,0)}}
+.shorts-actions-bar.indtube-short-ui-enter,.shorts-bottom-info.indtube-short-ui-enter,.shorts-comment-footer.indtube-short-ui-enter{animation:indTubeShortUiRise .42s cubic-bezier(.18,.78,.22,1) both;will-change:transform,opacity}
+.shorts-topbar.indtube-short-ui-enter{animation:indTubeShortTopRise .36s ease-out both;will-change:transform,opacity}
+@media(prefers-reduced-motion:reduce){.shorts-actions-bar.indtube-short-ui-enter,.shorts-bottom-info.indtube-short-ui-enter,.shorts-comment-footer.indtube-short-ui-enter,.shorts-topbar.indtube-short-ui-enter{animation:none!important}}
+</style>
+
+
+<script id="indtube-instagram-short-ui-motion-script">
+(function(){
+  const pauseBtn=document.getElementById('indtubeShortsPlayPause');
+  const stage=document.querySelector('.shorts-stage');
+  const gesture=document.getElementById('shortsGestureZone');
+  let hidePauseTimer=null;
+  let lastSwipeAt=0;
+  function revealPauseIcon(){
+    if(!pauseBtn)return;
+    pauseBtn.classList.add('indtube-pause-visible');
+    clearTimeout(hidePauseTimer);
+    hidePauseTimer=setTimeout(()=>pauseBtn.classList.remove('indtube-pause-visible'),950);
+  }
+  function hidePauseIcon(){
+    if(!pauseBtn)return;
+    clearTimeout(hidePauseTimer);
+    pauseBtn.classList.remove('indtube-pause-visible');
+  }
+  function animateShortOverlay(){
+    const nodes=[document.querySelector('.shorts-actions-bar'),document.querySelector('.shorts-bottom-info'),document.querySelector('.shorts-topbar'),document.querySelector('.shorts-comment-footer')];
+    nodes.forEach((node)=>{
+      if(!node)return;
+      node.classList.remove('indtube-short-ui-enter');
+      void node.offsetWidth;
+      node.classList.add('indtube-short-ui-enter');
+    });
+    hidePauseIcon();
+    if(typeof setIndTubeShortsPauseUI==='function')setIndTubeShortsPauseUI(false);
+  }
+  // Wrap the existing feed renderer so every newly swiped Short brings its full UI up from below.
+  const originalShow=window.showCurrentShort;
+  if(typeof originalShow==='function'&&!originalShow.__indtubeUiWrapped){
+    const wrapped=function(){
+      const result=originalShow.apply(this,arguments);
+      requestAnimationFrame(animateShortOverlay);
+      return result;
+    };
+    wrapped.__indtubeUiWrapped=true;
+    window.showCurrentShort=wrapped;
+  }
+  function playPauseFromTap(){
+    const frame=(typeof indTubeShortSlots!=='undefined'&&indTubeShortSlots[typeof indTubeActiveShortSlot!=='undefined'?indTubeActiveShortSlot:-1])||document.querySelector('#shortsIframeContainer iframe.is-active');
+    if(!frame||!frame.contentWindow)return;
+    const paused=(typeof indTubeShortsPaused!=='undefined')?!!indTubeShortsPaused:false;
+    const command=paused?'playVideo':'pauseVideo';
+    try{
+      frame.contentWindow.postMessage(JSON.stringify({event:'command',func:command,args:[]}),'*');
+      if(typeof window.setIndTubeShortsPauseUI==='function')window.setIndTubeShortsPauseUI(!paused);
+      revealPauseIcon();
+    }catch(e){console.warn('Shorts tap control unavailable',e)}
+  }
+  // Tapping the video toggles playback and briefly displays the matching pause/play symbol.
+  if(gesture){
+    gesture.addEventListener('click',function(event){
+      if(Date.now()-lastSwipeAt<450)return;
+      if(event.target.closest('button,a,input,.shorts-actions-bar,.shorts-bottom-info,.shorts-topbar'))return;
+      playPauseFromTap();
+    });
+  }
+  // The central glyph itself also toggles and disappears automatically.
+  if(pauseBtn){
+    pauseBtn.addEventListener('click',function(event){event.stopPropagation();});
+    const oldToggle=window.toggleIndTubeShortsPlayback;
+    window.toggleIndTubeShortsPlayback=function(){
+      if(typeof oldToggle==='function')oldToggle();
+      revealPauseIcon();
+    };
+  }
+  // Mark real swipe gestures so their synthetic click cannot pause the next Short.
+  if(stage){
+    let sy=0,sx=0,moved=false;
+    stage.addEventListener('touchstart',e=>{const t=e.changedTouches&&e.changedTouches[0];if(t){sy=t.clientY;sx=t.clientX;moved=false;}},{passive:true,capture:true});
+    stage.addEventListener('touchmove',e=>{const t=e.changedTouches&&e.changedTouches[0];if(t&&Math.abs(t.clientY-sy)>18&&Math.abs(t.clientY-sy)>Math.abs(t.clientX-sx))moved=true;},{passive:true,capture:true});
+    stage.addEventListener('touchend',()=>{if(moved){lastSwipeAt=Date.now();hidePauseIcon();}},{passive:true,capture:true});
+  }
+  // Start with no pause glyph showing; UI animates on the first rendered Short too.
+  hidePauseIcon();
+  if(document.getElementById('shortsViewer')?.classList.contains('active'))requestAnimationFrame(animateShortOverlay);
+})();
+</script>
+
+<style id="indtube-shorts-own-ui-only">
+/* Keep the Shorts action rail and app overlays entirely IndTube-owned. */
+.shorts-actions-bar .short-action-icon { display:block; }
+</style>
+
+<style id="indtube-short-no-animation-direction-fix">
+/* User preference: switch Shorts instantly, without slide/fade animation.
+   Direction is still tracked by nextShort/previousShort; the new Short is
+   displayed immediately rather than animated across the screen. */
+#shortsIframeContainer iframe.indtube-short-slot,
+.shorts-actions-bar, .shorts-bottom-info, .shorts-topbar, .shorts-comment-footer,
+.shorts-actions-bar.indtube-short-ui-enter,
+.shorts-bottom-info.indtube-short-ui-enter,
+.shorts-topbar.indtube-short-ui-enter,
+.shorts-comment-footer.indtube-short-ui-enter {
+  transition: none !important;
+  animation: none !important;
+  scroll-behavior: auto !important;
+}
+</style>
+
 </body>
 </html>
 <style>.indtube-subscription-channel-strip button:focus-visible{outline:2px solid var(--accent,#ff6a00);outline-offset:3px;border-radius:12px}.indtube-subscription-channel-strip button:hover{opacity:.86}</style>
@@ -4645,3 +5071,53 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) setT
   new MutationObserver(bind).observe(document.documentElement,{childList:true,subtree:true});
 })();
 </script>
+
+
+
+
+<style id="indtube-short-smooth-synced-scroll-fix">
+/* One coordinated Instagram-like page transition: video and every overlay move together. */
+#shortsIframeContainer iframe.indtube-short-slot {
+  transition: transform 420ms cubic-bezier(.22,.72,.18,1) !important;
+  will-change: transform;
+}
+#shortsIframeContainer iframe.indtube-short-slot.is-entering-bottom { transform:translate3d(0,100%,0) !important; }
+#shortsIframeContainer iframe.indtube-short-slot.is-entering-top { transform:translate3d(0,-100%,0) !important; }
+#shortsIframeContainer iframe.indtube-short-slot.is-active { transform:translate3d(0,0,0) !important; }
+#shortsIframeContainer iframe.indtube-short-slot.is-exiting-top { transform:translate3d(0,-100%,0) !important; }
+#shortsIframeContainer iframe.indtube-short-slot.is-exiting-bottom { transform:translate3d(0,100%,0) !important; }
+.shorts-actions-bar.indtube-short-ui-enter,
+.shorts-bottom-info.indtube-short-ui-enter,
+.shorts-topbar.indtube-short-ui-enter,
+.shorts-comment-footer.indtube-short-ui-enter {
+  animation:indTubeShortOverlayFromBottom 420ms cubic-bezier(.22,.72,.18,1) both !important;
+  will-change:transform,opacity;
+}
+.shorts-actions-bar.indtube-short-ui-enter,
+.shorts-bottom-info.indtube-short-ui-enter,
+.shorts-comment-footer.indtube-short-ui-enter { transform:translate3d(0,0,0); opacity:1; }
+.shorts-topbar.indtube-short-ui-enter { animation-name:indTubeShortOverlayFromTop !important; }
+@keyframes indTubeShortOverlayFromBottom { from{transform:translate3d(0,100%,0);opacity:0} to{transform:translate3d(0,0,0);opacity:1} }
+@keyframes indTubeShortOverlayFromTop { from{transform:translate3d(0,-100%,0);opacity:0} to{transform:translate3d(0,0,0);opacity:1} }
+html[data-short-direction="down"] .shorts-actions-bar.indtube-short-ui-enter,
+html[data-short-direction="down"] .shorts-bottom-info.indtube-short-ui-enter,
+html[data-short-direction="down"] .shorts-comment-footer.indtube-short-ui-enter { animation-name:indTubeShortOverlayFromTop !important; }
+/* Reduced-motion preference remains respected. */
+@media(prefers-reduced-motion:reduce){
+ #shortsIframeContainer iframe.indtube-short-slot,
+ .shorts-actions-bar.indtube-short-ui-enter,.shorts-bottom-info.indtube-short-ui-enter,
+ .shorts-topbar.indtube-short-ui-enter,.shorts-comment-footer.indtube-short-ui-enter{transition:none!important}
+}
+</style>
+
+
+
+/* IndTube overlay masks: cover duplicate YouTube Shorts branding/profile/share UI
+   while keeping IndTube's own controls above the masks. */
+.indtube-yt-ui-mask{position:absolute;inset:0;z-index:10;pointer-events:none;overflow:hidden}
+.indtube-yt-ui-mask span{position:absolute;display:block;pointer-events:none}
+.indtube-mask-top{top:0;left:0;width:min(54%,220px);height:58px;background:linear-gradient(180deg,rgba(0,0,0,.78),rgba(0,0,0,.40),transparent);}
+.indtube-mask-bottom-left{left:0;bottom:0;width:calc(100% - 66px);height:158px;background:linear-gradient(0deg,rgba(0,0,0,.94) 0%,rgba(0,0,0,.82) 48%,rgba(0,0,0,.38) 82%,transparent 100%);}
+.indtube-mask-bottom-right{right:0;bottom:0;width:78px;height:145px;background:linear-gradient(0deg,rgba(0,0,0,.92),rgba(0,0,0,.62) 65%,transparent);}
+.indtube-short-avatar{width:30px;height:30px;flex:0 0 30px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,#ff8a24,#ff3b63 55%,#7b4dff);border:1.5px solid rgba(255,255,255,.9);color:#fff;font-size:16px;font-weight:900;text-shadow:none;box-shadow:0 1px 5px #0009}
+.shorts-topbar,.shorts-actions-bar,.shorts-bottom-info{z-index:12}

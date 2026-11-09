@@ -4982,6 +4982,202 @@ document.addEventListener('DOMContentLoaded',()=>{const d=channelData();if(d.nam
 }
 </style>
 
+
+
+<!-- IndTube Supabase-only Long/Short feed separation -->
+<style id="indtube-supabase-type-separation-style">
+  #shortsIframeContainer video.indtube-native-short { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; background:#000; }
+  #shortsGestureZone { pointer-events:none !important; }
+  #shortsIframeContainer { background:#000; }
+  .indtube-supabase-feed-empty { grid-column:1/-1; padding:24px 12px; text-align:center; color:var(--text-secondary); }
+</style>
+<script id="indtube-supabase-type-separation">
+(function(){
+  'use strict';
+  const sb = () => window.indSupabase || (typeof indSupabase !== 'undefined' ? indSupabase : null);
+  const safeText = value => String(value || '').trim();
+  const videoId = row => String(row?.id || '');
+  const shortObject = row => ({
+    id: videoId(row),
+    __indtubeSupabase: true,
+    video_url: row.video_url,
+    thumbnail_url: row.thumbnail_url || '',
+    created_at: row.created_at,
+    snippet: {
+      title: row.title || 'Untitled Short',
+      description: row.description || '',
+      channelTitle: 'IndTube Creator',
+      channelId: '',
+      publishedAt: row.created_at || ''
+    }
+  });
+  function showEmpty(container, message){
+    if(container) container.innerHTML = `<div class="indtube-supabase-feed-empty">${message}</div>`;
+  }
+  function makeLongCard(row){
+    const card=document.createElement('article');
+    card.className='video-card indtube-uploaded-video-card';
+    card.dataset.indtubeSupabaseId=String(row.id);
+    const thumb=document.createElement('div'); thumb.className='thumbnail-box';
+    if(row.thumbnail_url){ const img=document.createElement('img'); img.src=row.thumbnail_url; img.alt=row.title||'IndTube video'; img.loading='lazy'; thumb.appendChild(img); }
+    else { thumb.style.cssText='display:flex;align-items:center;justify-content:center;background:#202020;color:#fff;font-size:42px;'; thumb.textContent='▶'; }
+    const details=document.createElement('div'); details.className='video-details';
+    const avatar=document.createElement('div'); avatar.className='channel-avatar'; avatar.textContent='I';
+    const meta=document.createElement('div'); meta.className='meta-info';
+    const heading=document.createElement('h3'); heading.textContent=row.title||'Untitled video';
+    const info=document.createElement('p'); info.textContent=`IndTube • Video • ${typeof indTubeTimeAgo==='function'?indTubeTimeAgo(row.created_at):''}`;
+    meta.append(heading,info); details.append(avatar,meta); card.append(thumb,details);
+    card.addEventListener('click',()=>{
+      const snippet={title:row.title||'Video',description:row.description||'',channelTitle:'IndTube Creator',channelId:'',publishedAt:row.created_at||'',video_url:row.video_url,__indtubeSupabase:true};
+      if(typeof window.openWatchScreen==='function') window.openWatchScreen(String(row.id),snippet);
+    });
+    return card;
+  }
+
+  // Home and search are served only by published IndTube LONG uploads.
+  window.fetchYouTubeVideos = async function(query='', isShorts=false){
+    const container=document.getElementById('feedContainer');
+    if(!container) return;
+    if(typeof resetFeedState==='function') resetFeedState(query||'',isShorts?'shorts':'home');
+    const version=(typeof feedRequestVersion==='number')?++feedRequestVersion:1;
+    if(typeof hasMoreVideos!=='undefined') hasMoreVideos=false;
+    if(typeof nextPageToken!=='undefined') nextPageToken='';
+    container.innerHTML='<div class="loader-box"><div class="spinner"></div><p>IndTube videos लोड हो रहे हैं...</p></div>';
+    try{
+      if(isShorts){ if(typeof window.openShortsMode==='function') return window.openShortsMode(); return; }
+      let request=sb().from('videos').select('id,title,description,video_url,thumbnail_url,video_type,created_at').eq('status','published').eq('video_type','long').order('created_at',{ascending:false}).limit(50);
+      const q=safeText(query);
+      if(q) request=request.ilike('title',`%${q.replace(/[%_]/g,'')}%`);
+      const {data,error}=await request;
+      if(error) throw error;
+      if(version!==feedRequestVersion) return;
+      container.innerHTML='';
+      (data||[]).forEach(row=>{ if(row?.id&&row?.video_url) container.appendChild(makeLongCard(row)); });
+      if(!container.children.length) showEmpty(container,q?'इस खोज में कोई Long Video नहीं मिला।':'अभी कोई Long Video उपलब्ध नहीं है।');
+    }catch(error){
+      console.error('IndTube Long feed error:',error);
+      showEmpty(container,'IndTube वीडियो लोड नहीं हो पाए। इंटरनेट और Supabase की public SELECT policy जाँचें।');
+    }
+  };
+  window.loadMoreVideos = async function(){ return false; };
+  window.retryVideoFeed = function(){ return window.fetchYouTubeVideos(currentQuery||'',false); };
+
+  // Replace the existing YouTube iframe in the watch page with the uploaded Supabase file.
+  const originalOpenWatch=window.openWatchScreen;
+  if(typeof originalOpenWatch==='function'){
+    window.openWatchScreen=function(id,snippet={}){
+      originalOpenWatch.call(this,id,snippet||{});
+      if(!snippet?.__indtubeSupabase || !snippet?.video_url) return;
+      const player=document.getElementById('mainPlayerContainer');
+      if(!player) return;
+      const frame=player.querySelector('iframe');
+      const video=document.createElement('video');
+      video.src=snippet.video_url; video.controls=true; video.autoplay=true; video.playsInline=true; video.preload='metadata';
+      video.style.cssText='width:100%;height:100%;display:block;background:#000;object-fit:contain;';
+      video.addEventListener('click',e=>e.stopPropagation());
+      if(frame) frame.replaceWith(video); else player.appendChild(video);
+      video.play().catch(()=>{});
+      const sub=document.getElementById('watchVideoSubtext'); if(sub) sub.textContent='IndTube Creator • '+(snippet.publishedAt?new Date(snippet.publishedAt).toLocaleDateString():'');
+      const channel=document.getElementById('channelNameTag'); if(channel) channel.textContent='IndTube Creator';
+      const shelf=document.getElementById('shortsShelfSection'); if(shelf) shelf.style.display='';
+      window.loadHorizontalShortsShelf(snippet.title||'');
+      window.fetchRelatedVideos(snippet.title||'');
+    };
+  }
+
+  // Shorts carousel under a Long Video contains only published Supabase SHORT uploads.
+  window.loadHorizontalShortsShelf = async function(){
+    const container=document.getElementById('shortsCarouselContainer');
+    const section=document.getElementById('shortsShelfSection');
+    if(!container||!section) return;
+    section.style.display='';
+    container.innerHTML='<div style="color:#aaa;font-size:12px;padding:10px">IndTube Shorts लोड हो रहे हैं...</div>';
+    try{
+      const {data,error}=await sb().from('videos').select('id,title,description,video_url,thumbnail_url,video_type,created_at').eq('status','published').eq('video_type','short').order('created_at',{ascending:false}).limit(20);
+      if(error) throw error;
+      container.innerHTML='';
+      const items=(data||[]).filter(v=>v.id&&v.video_url).map(shortObject);
+      if(!items.length){container.innerHTML='<div style="color:#aaa;font-size:12px;padding:10px">अभी IndTube पर Shorts उपलब्ध नहीं हैं।</div>';return;}
+      items.forEach((item,index)=>{
+        const card=document.createElement('div'); card.className='short-shelf-card'; card.tabIndex=0; card.setAttribute('role','button');
+        const img=document.createElement('img'); img.alt=''; img.loading='lazy'; img.decoding='async';
+        img.style.background='#222';
+        if(item.thumbnail_url){ img.src=item.thumbnail_url; img.onerror=function(){ this.removeAttribute('src'); this.style.display='none'; }; }
+        else { img.style.display='none'; }
+        const info=document.createElement('div'); info.className='short-shelf-info';
+        const title=document.createElement('h4'); title.textContent=item.snippet.title;
+        const creator=document.createElement('span'); creator.textContent='IndTube Creator'; info.append(title,creator); card.append(img,info);
+        const open=()=>window.openShortsMode(item.id);
+        card.addEventListener('click',open); card.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();open();}});
+        container.appendChild(card);
+      });
+    }catch(error){console.error('IndTube Shorts shelf error:',error);container.innerHTML='<div style="color:#aaa;font-size:12px;padding:10px">Shorts अभी लोड नहीं हो पाए।</div>';}
+  };
+
+  // Related area is kept Long-only; Shorts have their own shelf immediately above it.
+  window.fetchRelatedVideos = async function(){
+    const container=document.getElementById('relatedFeedContainer'); if(!container) return;
+    container.innerHTML='<p style="color:#aaa;padding:12px">Related Long Videos लोड हो रहे हैं...</p>';
+    try{
+      const selected=currentVideoObj?.id;
+      const {data,error}=await sb().from('videos').select('id,title,description,video_url,thumbnail_url,video_type,created_at').eq('status','published').eq('video_type','long').order('created_at',{ascending:false}).limit(20);
+      if(error) throw error;
+      container.innerHTML='';
+      (data||[]).filter(v=>String(v.id)!==String(selected)&&v.video_url).forEach(v=>container.appendChild(makeLongCard(v)));
+      if(!container.children.length) showEmpty(container,'अभी Related Long Videos उपलब्ध नहीं हैं।');
+    }catch(error){console.error('IndTube related feed error:',error);showEmpty(container,'Related videos अभी लोड नहीं हो पाए।');}
+  };
+
+  // Shorts tab reads ONLY video_type='short' from Supabase; no YouTube search/API.
+  window.openShortsMode = async function(initialId=''){
+    if(typeof pauseLongVideoForShorts==='function') pauseLongVideoForShorts();
+    try{history.pushState({indtubeView:'shorts'},'','#shorts');}catch(_){}
+    if(typeof setActiveNav==='function') setActiveNav('navShorts');
+    document.querySelectorAll('.view-section').forEach(s=>s.classList.remove('active'));
+    document.getElementById('shortsViewer')?.classList.add('active');
+    const host=document.getElementById('shortsIframeContainer');
+    if(host) host.innerHTML='<div class="loader-box"><div class="spinner"></div><p>IndTube Shorts लोड हो रहे हैं...</p></div>';
+    try{
+      const {data,error}=await sb().from('videos').select('id,title,description,video_url,thumbnail_url,video_type,created_at').eq('status','published').eq('video_type','short').order('created_at',{ascending:false}).limit(50);
+      if(error) throw error;
+      shortsList=(data||[]).filter(v=>v.id&&v.video_url).map(shortObject);
+      shortsNextPageToken=''; shortsIndex=0;
+      if(initialId){const idx=shortsList.findIndex(v=>String(v.id)===String(initialId));if(idx>=0)shortsIndex=idx;}
+      if(!shortsList.length){if(host)host.innerHTML='<div class="loader-box"><p>अभी IndTube पर Shorts उपलब्ध नहीं हैं।</p></div>';return;}
+      window.showCurrentShort();
+    }catch(error){console.error('Supabase Shorts load failed:',error);if(host)host.innerHTML='<div class="loader-box"><p>Shorts लोड नहीं हो पाए। Supabase policy जाँचें।</p></div>';}
+  };
+  window.loadMoreShorts = async function(){return false;};
+
+  // Native HTML5 player for IndTube Shorts (no YouTube iframe).
+  window.showCurrentShort = function(){
+    const item=shortsList[shortsIndex]; if(!item) return;
+    const host=document.getElementById('shortsIframeContainer'); if(!host) return;
+    const id=videoId(item);
+    const saved=safeLoad('indtube_shorts_reactions',{})[id]||(safeLoad('indtube_shorts_likes',{})[id]?'like':'');
+    shortsLiked=saved==='like';
+    document.getElementById('shortLikeBtn')?.classList.toggle('is-liked',saved==='like');
+    document.getElementById('shortDislikeBtn')?.classList.toggle('is-disliked',saved==='dislike');
+    if(typeof closeShortComments==='function') closeShortComments();
+    if(typeof closeShortMoreMenu==='function') closeShortMoreMenu();
+    const creator=document.getElementById('shortsCreatorName'); if(creator){creator.textContent='IndTube Creator';creator.onclick=null;}
+    const caption=document.getElementById('shortsCaption'); if(caption) caption.textContent=item.snippet?.title||'IndTube Short';
+    const video=document.createElement('video'); video.className='indtube-native-short'; video.src=item.video_url; video.controls=true; video.autoplay=true; video.playsInline=true; video.preload='metadata';
+    video.addEventListener('ended',()=>{if(shortsIndex<shortsList.length-1)window.nextShort();});
+    host.replaceChildren(video); video.play().catch(()=>{});
+    window.setIndTubeShortsPauseUI?.(false);
+    if(typeof renderShortComments==='function') renderShortComments();
+  };
+  window.toggleIndTubeShortsPlayback = function(){
+    const video=document.querySelector('#shortsIframeContainer video'); if(!video)return;
+    if(video.paused){video.play().catch(()=>{});window.setIndTubeShortsPauseUI?.(false);}else{video.pause();window.setIndTubeShortsPauseUI?.(true);}
+  };
+  window.pauseLongVideoForShorts = function(){
+    document.querySelectorAll('#mainPlayerContainer video,#miniPlayerVideo video').forEach(v=>{try{v.pause();}catch(_){}});
+  };
+})();
+</script>
+
 </body>
 </html>
 <style>.indtube-subscription-channel-strip button:focus-visible{outline:2px solid var(--accent,#ff6a00);outline-offset:3px;border-radius:12px}.indtube-subscription-channel-strip button:hover{opacity:.86}</style>

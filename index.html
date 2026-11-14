@@ -2954,28 +2954,7 @@ function initMiniPlayerDrag() {
 
 document.addEventListener('DOMContentLoaded', initMiniPlayerDrag);
 
-// Pull down from the top of the feed to refresh IndTube without a full page reload.
-(function enablePullToRefresh(){
-  let startY = 0, tracking = false, refreshing = false;
-  document.addEventListener('touchstart', e => {
-    if (window.scrollY > 2 || !e.touches?.length || e.target.closest('.mini-inline-controls')) return;
-    tracking = true; startY = e.touches[0].clientY;
-  }, {passive:true});
-  document.addEventListener('touchmove', e => {
-    if (!tracking || !e.touches?.length) return;
-    if (e.touches[0].clientY - startY > 115 && !refreshing) {
-      tracking = false; refreshing = true;
-      const home = document.getElementById('homeFeedSection');
-      if (home?.classList.contains('active')) {
-        const feed = document.getElementById('feedContainer');
-        if (feed) feed.scrollIntoView({block:'start', behavior:'instant'});
-        fetchYouTubeVideos(currentQuery || '', false).finally(() => { refreshing = false; });
-      } else refreshing = false;
-    }
-  }, {passive:true});
-  document.addEventListener('touchend', () => { tracking = false; }, {passive:true});
-})();
-
+// Home feed refresh is intentionally disabled on swipe. A fresh randomized feed is loaded only when the app starts.
 // Let IndTube restore the saved feed position itself (important in Android WebView).
 try { if ('scrollRestoration' in history) history.scrollRestoration = 'manual'; } catch (_) {}
 
@@ -3130,8 +3109,10 @@ function switchTab(tab) {
     const related = document.getElementById('relatedSearches'); if (related) related.innerHTML = '';
     document.body.classList.remove('search-page-open');
     setActiveNav('navHome'); document.getElementById('homeFeedSection').classList.add('active');
-    // Every Home visit asks for a fresh batch; recently viewed IDs are filtered out.
-    fetchYouTubeVideos('', false);
+    // Keep the current Home feed while navigating inside the app.
+    // The startup handler loads a fresh randomized batch once per app launch.
+    const homeFeed = document.getElementById('feedContainer');
+    if (homeFeed && !homeFeed.children.length) fetchYouTubeVideos('', false);
   } else if (tab === 'subscriptions') {
     setActiveNav('navWatchLater'); document.getElementById('watchLaterSection').classList.add('active'); renderSubscriptionsScreen();
   } else if (tab === 'watchLater') {
@@ -5097,14 +5078,8 @@ document.addEventListener('DOMContentLoaded',()=>{const d=channelData();if(d.nam
       revealPauseIcon();
     }catch(e){console.warn('Shorts tap control unavailable',e)}
   }
-  // Tapping the video toggles playback and briefly displays the matching pause/play symbol.
-  if(gesture){
-    gesture.addEventListener('click',function(event){
-      if(Date.now()-lastSwipeAt<450)return;
-      if(event.target.closest('button,a,input,.shorts-actions-bar,.shorts-bottom-info,.shorts-topbar'))return;
-      playPauseFromTap();
-    });
-  }
+  // Video taps are handled once by the native Shorts controller below.
+  // Do not bind a second click handler here: it can toggle playback twice.
   // The central glyph itself also toggles and disappears automatically.
   if(pauseBtn){
     pauseBtn.addEventListener('click',function(event){event.stopPropagation();});
@@ -5237,14 +5212,23 @@ document.addEventListener('DOMContentLoaded',()=>{const d=channelData();if(d.nam
       if(isShorts){ if(typeof window.openShortsMode==='function') return window.openShortsMode(); return; }
       const client=sb();
       if(!client) throw new Error('Supabase client initialize nahi hua');
-      let request=client.from('videos').select('*').eq('status','published').eq('video_type','long').order('created_at',{ascending:false}).limit(50);
+      let request=client.from('videos').select('*').eq('status','published').eq('video_type','long').order('created_at',{ascending:false}).limit(1000);
       const q=safeText(query);
       if(q) request=request.ilike('title',`%${q.replace(/[%_]/g,'')}%`);
       const {data,error}=await request;
       if(error) throw error;
       if(version!==feedRequestVersion) return;
       container.innerHTML='';
-      (data||[]).forEach(row=>{ if(row?.id&&row?.video_url) container.appendChild(makeLongCard(row)); });
+      let feedRows=(data||[]).filter(row=>row?.id&&row?.video_url);
+      // Randomize only the fresh Home batch on app launch; searches keep their query order.
+      if(!q){
+        for(let i=feedRows.length-1;i>0;i--){
+          const j=Math.floor(Math.random()*(i+1));
+          [feedRows[i],feedRows[j]]=[feedRows[j],feedRows[i]];
+        }
+      }
+      feedRows.forEach(row=>container.appendChild(makeLongCard(row)));
+      container.dataset.indtubeLoaded='1';
       if(!container.children.length) showEmpty(container,q?'इस खोज में कोई Long Video नहीं मिला।':'अभी कोई Long Video उपलब्ध नहीं है।');
     }catch(error){
       console.error('IndTube Long feed error:',error);
@@ -5409,6 +5393,72 @@ document.addEventListener('DOMContentLoaded',()=>{const d=channelData();if(d.nam
      from appearing during normal feed scrolling. -->
 
 <!-- IndTube view-count refresh patch: reads videos.views_count after each successful view RPC. -->
+
+<style id="indtube-shorts-portrait-ratio-fix">
+/* Shorts use the source video's real aspect ratio. Portrait 9:16 videos stay vertical,
+   centered and fully visible; never stretch or crop them to fill a wider screen. */
+#shortsViewer .shorts-stage,
+#shortsViewer #shortsIframeContainer {
+  width:100%; height:100%; min-height:0; background:#000 !important;
+}
+#shortsViewer #shortsIframeContainer video.indtube-native-short,
+#shortsViewer #shortsIframeContainer video.indtube-short-preload {
+  position:absolute !important; inset:0 !important;
+  width:100% !important; height:100% !important;
+  max-width:100% !important; max-height:100% !important;
+  object-fit:contain !important; object-position:center center !important;
+  background:#000 !important;
+}
+#shortsViewer #shortsIframeContainer video.indtube-native-short {
+  z-index:2;
+}
+#shortsViewer #shortsIframeContainer video.indtube-short-preload {
+  z-index:1;
+}
+</style>
+
+<style id="indtube-shorts-no-top-bottom-gap-fix">
+/* Shorts layout: use the complete visible phone height without an extra
+   76px flex/percentage-height gap; reserve space only for the comment bar. */
+#shortsViewer {
+  position:fixed !important;
+  inset:0 !important;
+  width:100vw !important;
+  height:100vh !important;
+  height:100dvh !important;
+  min-height:0 !important;
+  padding:0 0 env(safe-area-inset-bottom) 0 !important;
+  margin:0 !important;
+  gap:0 !important;
+  overflow:hidden !important;
+  box-sizing:border-box !important;
+}
+#shortsViewer .shorts-stage {
+  width:100% !important;
+  height:auto !important;
+  min-height:0 !important;
+  flex:1 1 0 !important;
+  margin:0 !important;
+  padding:0 !important;
+}
+#shortsViewer .shorts-comment-footer {
+  width:100% !important;
+  height:76px !important;
+  min-height:76px !important;
+  flex:0 0 76px !important;
+  margin:0 !important;
+  box-sizing:border-box !important;
+}
+#shortsViewer #shortsIframeContainer {
+  inset:0 !important;
+  width:100% !important;
+  height:100% !important;
+}
+@media (max-width:600px) {
+  #shortsViewer .shorts-stage { max-width:none !important; }
+  #shortsViewer .shorts-comment-footer { max-width:none !important; }
+}
+</style>
 </body>
 </html>
 <style>.indtube-subscription-channel-strip button:focus-visible{outline:2px solid var(--accent,#ff6a00);outline-offset:3px;border-radius:12px}.indtube-subscription-channel-strip button:hover{opacity:.86}</style>
@@ -6603,3 +6653,172 @@ html[data-short-direction="down"] .shorts-comment-footer.indtube-short-ui-enter 
   });
 })();
 </script>
+
+<!-- IndTube Shorts: single-tap pause/resume; scrolling never reveals the center glyph -->
+<style id="indtube-shorts-tap-controls-style">
+  #indtubeShortsPlayPause.is-paused,
+  #indtubeShortsPlayPause.indtube-pause-visible.is-paused {
+    opacity:1!important; visibility:visible!important; pointer-events:auto!important;
+  }
+</style>
+<script id="indtube-shorts-tap-controls-script">
+(function(){
+  if (window.__indtubeShortTapControlsInstalled) return;
+  window.__indtubeShortTapControlsInstalled = true;
+
+  const stage = document.querySelector('#shortsViewer .shorts-stage');
+  const pauseBtn = document.getElementById('indtubeShortsPlayPause');
+  const viewer = document.getElementById('shortsViewer');
+  if (!stage || !pauseBtn) return;
+
+  let hideTimer = null;
+  let touchStartX = 0, touchStartY = 0, moved = false;
+
+  function activeVideo(){
+    return document.querySelector('#shortsIframeContainer video.indtube-native-short');
+  }
+  function hidePauseUI(){
+    clearTimeout(hideTimer);
+    pauseBtn.classList.remove('indtube-pause-visible');
+  }
+  function setPauseUI(paused, fromTap){
+    try { window.setIndTubeShortsPauseUI?.(paused); } catch(_) {}
+    pauseBtn.classList.toggle('is-paused', !!paused);
+    clearTimeout(hideTimer);
+    if (paused && fromTap) {
+      pauseBtn.classList.add('indtube-pause-visible');
+      // Keep the Play glyph visible for as long as the Short remains paused.
+    } else {
+      // While playing, show feedback only briefly after an intentional tap.
+      if (fromTap) {
+        pauseBtn.classList.add('indtube-pause-visible');
+        hideTimer = setTimeout(hidePauseUI, 420);
+      } else {
+        hidePauseUI();
+      }
+    }
+  }
+  function togglePlayback(){
+    const video = activeVideo();
+    if (!video) return;
+    if (video.paused) {
+      video.muted = false;
+      video.volume = 1;
+      const promise = video.play();
+      if (promise && promise.catch) promise.catch(()=>{});
+      setPauseUI(false, true);
+    } else {
+      video.pause();
+      setPauseUI(true, true);
+    }
+  }
+  window.toggleIndTubeShortsPlayback = togglePlayback;
+
+  stage.addEventListener('click', function(event){
+    if (!viewer?.classList.contains('active') || moved) return;
+    if (event.target.closest('button,a,input,textarea,select,.shorts-actions-bar,.shorts-bottom-info,.shorts-topbar,.shorts-comment-footer')) return;
+    const gestureZone = event.target.closest('#shortsGestureZone');
+    if (gestureZone && gestureZone.dataset.ignoreTap === '1') return;
+    togglePlayback();
+  }, false);
+
+  // A vertical swipe changes Shorts only; it must never show the pause/play icon.
+  stage.addEventListener('touchstart', function(event){
+    const t = event.changedTouches && event.changedTouches[0];
+    if (!t) return;
+    touchStartX = t.clientX; touchStartY = t.clientY; moved = false;
+  }, {passive:true, capture:true});
+  stage.addEventListener('touchmove', function(event){
+    const t = event.changedTouches && event.changedTouches[0];
+    if (!t) return;
+    if (Math.abs(t.clientY-touchStartY) > 10 || Math.abs(t.clientX-touchStartX) > 10) {
+      moved = true;
+      hidePauseUI();
+    }
+  }, {passive:true, capture:true});
+  stage.addEventListener('touchend', function(){
+    if (moved) {
+      hidePauseUI();
+      // Reset after the browser has dispatched the swipe's synthetic click.
+      setTimeout(()=>{ moved = false; }, 80);
+    }
+  }, {passive:true, capture:true});
+  stage.addEventListener('scroll', hidePauseUI, {passive:true});
+
+  // Keep state in sync, but never display a glyph just because a Short starts playing.
+  const observer = new MutationObserver(()=>{
+    const video = activeVideo();
+    if (!video || video.dataset.indtubeTapStateHooked === '1') return;
+    video.dataset.indtubeTapStateHooked = '1';
+    video.addEventListener('pause', ()=>setPauseUI(true, false));
+    video.addEventListener('play', ()=>setPauseUI(false, false));
+  });
+  observer.observe(document.getElementById('shortsIframeContainer') || stage, {childList:true,subtree:true});
+
+  // Never show a center control on initial load or when a new Short is rendered.
+  hidePauseUI();
+  document.addEventListener('visibilitychange', ()=>{ if (document.hidden) hidePauseUI(); });
+})();
+</script>
+
+
+<style id="indtube-shorts-true-source-ratio-final">
+/* Keep every Short at its own real video aspect ratio. A 9:16 upload
+   remains 9:16 instead of being stretched to the full stage width. */
+#shortsViewer .shorts-stage {
+  position:relative !important;
+  overflow:hidden !important;
+  background:#000 !important;
+}
+#shortsViewer #shortsIframeContainer {
+  position:absolute !important;
+  inset:0 !important;
+  width:100% !important;
+  height:100% !important;
+  overflow:hidden !important;
+  background:#000 !important;
+}
+#shortsViewer #shortsIframeContainer video.indtube-native-short,
+#shortsViewer #shortsIframeContainer video.indtube-short-preload {
+  position:absolute !important;
+  top:0 !important;
+  left:50% !important;
+  right:auto !important;
+  bottom:0 !important;
+  width:auto !important;
+  height:100% !important;
+  min-width:0 !important;
+  max-width:100% !important;
+  min-height:0 !important;
+  max-height:100% !important;
+  aspect-ratio:auto !important;
+  object-fit:contain !important;
+  object-position:center center !important;
+  transform:translateX(-50%) !important;
+  background:#000 !important;
+}
+</style>
+
+
+<style id="indtube-shorts-horizontal-centering-scroll-fix">
+/* Keep Shorts centered during vertical swipe. The old left:50% +
+   translateX(-50%) was overwritten by the swipe's translate3d(0,y,0),
+   which pushed the video sideways and exposed a black strip. */
+#shortsViewer #shortsIframeContainer video.indtube-native-short,
+#shortsViewer #shortsIframeContainer video.indtube-short-preload {
+  position:absolute !important;
+  inset:0 !important;
+  left:0 !important;
+  right:0 !important;
+  width:100% !important;
+  height:100% !important;
+  min-width:0 !important;
+  max-width:100% !important;
+  min-height:0 !important;
+  max-height:100% !important;
+  transform:translate3d(0,0,0) !important;
+  object-fit:contain !important;
+  object-position:center center !important;
+  background:#000 !important;
+}
+</style>

@@ -2128,7 +2128,9 @@ function openWatchScreen(videoId, snippet = {}) {
   window.scrollTo({top:0,behavior:'instant'});
   const origin = /^https?:$/.test(location.protocol) ? `&origin=${encodeURIComponent(location.origin)}` : '';
   const player = document.getElementById('mainPlayerContainer');
-  if (player) player.innerHTML = `<div class="mini-inline-controls"><span>▶ IndTube में चल रहा है</span><span class="mini-inline-actions"><button type="button" class="mini-close-btn" onclick="event.stopPropagation();stopMiniPlayer()" aria-label="Mini player बंद करें" title="बंद करें">×</button></span></div><button class="indtube-player-collapse" type="button" onclick="(function(){if(history.state?.indtubeWatch){history.back();}else{document.querySelectorAll('.view-section').forEach(x=>x.classList.remove('active'));document.getElementById('homeFeedSection')?.classList.add('active');document.getElementById('topHeader').style.display='flex';document.getElementById('categoryBar').style.display='flex';window.scrollTo({top:0,behavior:'smooth'});}})()" aria-label="Back to video list" title="Back"><svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true"><path d="m5 9 7 7 7-7" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button><button class="landscape-player-btn" type="button" onclick="toggleIndTubeLandscape()" aria-label="Landscape full screen" title="Landscape Full Screen"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false"><path d="M8 3H3v5 M16 3h5v5 M3 16v5h5 M21 16v5h-5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button><button class="indtube-center-playpause" type="button" onclick="toggleMainVideoPlayback()" aria-label="Pause video" title="Pause / Play"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5v14M17 5v14" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"/></svg></button><button class="indtube-seek-btn indtube-seek-back" type="button" onclick="indtubeSeekLongVideo(-10)" aria-label="10 seconds back" title="10 seconds back"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M12 10v28M36 10 18 24l18 14z" fill="currentColor" stroke="none"/></svg></button><button class="indtube-seek-btn indtube-seek-forward" type="button" onclick="indtubeSeekLongVideo(10)" aria-label="10 seconds forward" title="10 seconds forward"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M36 10v28M12 10l18 14-18 14z" fill="currentColor" stroke="none"/></svg></button><iframe src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(videoId)}?autoplay=1&playsinline=1&controls=0&rel=0&enablejsapi=1${origin}" referrerpolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen title="${escapeHtml(snippet.title||'YouTube video')}"></iframe>`;
+  if (player) player.innerHTML = `<div class="mini-inline-controls"><span>▶ IndTube में चल रहा है</span><span class="mini-inline-actions"><button type="button" class="mini-close-btn" onclick="event.stopPropagation();stopMiniPlayer()" aria-label="Mini player बंद करें" title="बंद करें">×</button></span></div><button class="indtube-player-collapse" type="button" onclick="(function(){if(history.state?.indtubeWatch){history.back();}else{document.querySelectorAll('.view-section').forEach(x=>x.classList.remove('active'));document.getElementById('homeFeedSection')?.classList.add('active');document.getElementById('topHeader').style.display='flex';document.getElementById('categoryBar').style.display='flex';window.scrollTo({top:0,behavior:'smooth'});}})()" aria-label="Back to video list" title="Back"><svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true"><path d="m5 9 7 7 7-7" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button><button class="landscape-player-btn" type="button" onclick="toggleIndTubeLandscape()" aria-label="Landscape full screen" title="Landscape Full Screen"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false"><path d="M8 3H3v5 M16 3h5v5 M3 16v5h5 M21 16v5h-5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button><button class="indtube-center-playpause" type="button" onclick="toggleMainVideoPlayback()" aria-label="Pause video" title="Pause / Play"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5v14M17 5v14" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"/></svg></button><button class="indtube-seek-btn indtube-seek-back" type="button" onclick="indtubeSeekLongVideo(-10)" aria-label="10 seconds back" title="10 seconds back"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M12 10v28M36 10 18 24l18 14z" fill="currentColor" stroke="none"/></svg></button><button class="indtube-seek-btn indtube-seek-forward" type="button" onclick="indtubeSeekLongVideo(10)" aria-label="10 seconds forward" title="10 seconds forward"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M36 10v28M12 10l18 14-18 14z" fill="currentColor" stroke="none"/></svg></button>${snippet.__indtubeSupabase && snippet.video_url
+    ? '<video class="indtube-supabase-main-video" controls playsinline preload="auto" style="width:100%;height:100%;display:block;background:#000;object-fit:contain;"></video>'
+    : '<div class="indtube-native-player-empty" style="width:100%;height:100%;min-height:180px;display:flex;align-items:center;justify-content:center;background:#000;color:#fff;text-align:center;padding:20px;">यह वीडियो IndTube के Supabase वीडियो लिंक पर उपलब्ध नहीं है।</div>'}`;
   // Supabase uploads must use IndTube's native HTML5 player, never a YouTube iframe.
   if (snippet.__indtubeSupabase && snippet.video_url && player) {
     const oldFrame = player.querySelector('iframe');
@@ -2303,8 +2305,28 @@ async function loadRealVideoStats(videoId, channelId) {
 
   // IndTube uploads are stored in Supabase Storage. Do not query YouTube for their UUIDs.
   if (currentVideoObj?.snippet?.__indtubeSupabase) {
-    const ownViews = Math.max(0, Number(currentVideoObj.snippet.viewCount) || 0);
-    if (viewsEl) viewsEl.textContent = ownViews.toLocaleString('en-IN');
+    // Always read the authoritative counter from Supabase, not the stale value
+    // copied into the feed card when it was first rendered.
+    try {
+      const client = window.indSupabase || (typeof indSupabase !== 'undefined' ? indSupabase : null);
+      if (!client) throw new Error('Supabase client unavailable');
+      const { data: row, error } = await client.from('videos')
+        .select('views_count').eq('id', String(videoId)).maybeSingle();
+      if (error) throw error;
+      const ownViews = Math.max(0, Number(row?.views_count ?? currentVideoObj.snippet.viewCount) || 0);
+      currentVideoObj.snippet.viewCount = ownViews;
+      if (viewsEl) viewsEl.textContent = ownViews.toLocaleString('en-IN');
+      const watchSubtext = document.getElementById('watchVideoSubtext');
+      if (watchSubtext) {
+        const publishedAt = currentVideoObj.snippet.publishedAt;
+        const timeLabel = publishedAt ? indTubeTimeAgo(publishedAt) : '';
+        watchSubtext.textContent = [currentVideoObj.snippet.channelTitle || 'IndTube Creator', ownViews.toLocaleString('en-IN') + ' views', timeLabel].filter(Boolean).join(' • ');
+      }
+    } catch (statsError) {
+      console.warn('IndTube views could not be read from Supabase:', statsError);
+      const ownViews = Math.max(0, Number(currentVideoObj.snippet.viewCount) || 0);
+      if (viewsEl) viewsEl.textContent = ownViews.toLocaleString('en-IN');
+    }
     if (likesEl) likesEl.textContent = '—';
     if (like) like.textContent = '—';
     const commentTag = document.getElementById('commentCountTag');
@@ -2312,10 +2334,15 @@ async function loadRealVideoStats(videoId, channelId) {
     if (commentTag) commentTag.textContent = '0';
     if (commentTotal) commentTotal.textContent = '0';
     if (subsEl) subsEl.textContent = 'लोड हो रहे हैं…';
-    await refreshIndTubeSubscriberCount(channelId);
+    // Start subscriber loading immediately; do not make it wait for the view-count query.
+    refreshIndTubeSubscriberCount(channelId);
     return;
   }
 
+  // Fetch the creator subscriber total in parallel with the video statistics request.
+  const subscriberRequest = channelId
+    ? youtubeRequest('channels', { part: 'statistics', id: channelId })
+    : Promise.resolve(null);
   try {
     const data = await youtubeRequest('videos', { part: 'statistics,snippet', id: videoId });
     if (token !== realStatsRequestToken || currentVideoObj?.id !== videoId) return;
@@ -2328,7 +2355,10 @@ async function loadRealVideoStats(videoId, channelId) {
     const comments = st.commentCount != null ? Number(st.commentCount).toLocaleString('en-IN') : '—';
     const snippet = currentVideoObj?.snippet || {};
     const watchSubtext = document.getElementById('watchVideoSubtext');
-    if (watchSubtext) watchSubtext.innerText = `${snippet.channelTitle || video.snippet?.channelTitle || 'YouTube'} • ${viewsText} views • ${indTubeTimeAgo(video.snippet?.publishedAt || snippet.publishedAt)}`;
+    if (watchSubtext) {
+      const publishedAt = video.snippet?.publishedAt || snippet.publishedAt;
+      watchSubtext.innerText = [snippet.channelTitle || video.snippet?.channelTitle || 'YouTube', `${viewsText} views`, publishedAt ? indTubeTimeAgo(publishedAt) : ''].filter(Boolean).join(' • ');
+    }
     if (viewsEl) viewsEl.textContent = viewsText;
     if (likesEl) likesEl.textContent = likesText;
     if (likes != null) {
@@ -2344,10 +2374,7 @@ async function loadRealVideoStats(videoId, channelId) {
     // YouTube may hide or round subscriber counts; use the value returned by API.
     if (channelId) {
       try {
-        const channelData = await youtubeRequest('channels', {
-          part: 'statistics',
-          id: channelId
-        });
+        const channelData = await subscriberRequest;
         if (token !== realStatsRequestToken || currentVideoObj?.id !== videoId) return;
         const channel = channelData.items?.[0];
         const stats = channel?.statistics || {};
@@ -3062,11 +3089,63 @@ function toggleDislike() {
   }
 }
 
+function makeIndTubeShareUrl(videoId) {
+  // GitHub Pages app URL with a stable, YouTube-style video parameter.
+  // Example: https://mauryamanish2153-droid.github.io/IndTube1/?v=SUPABASE_VIDEO_ID
+  const url = new URL(location.pathname.endsWith('/') ? location.pathname : location.pathname + '/', location.origin);
+  url.searchParams.set('v', String(videoId || ''));
+  return url.toString();
+}
+
 async function shareVideo() {
   const videoId = currentVideoObj?.id;
-  const url = videoId ? `https://www.youtube.com/watch?v=${videoId}` : location.href;
-  if (navigator.share) await navigator.share({ title: 'IndTube', url });
-  else prompt('Copy this link:', url);
+  if (!videoId) { alert('Pehle video open karein.'); return; }
+  const url = makeIndTubeShareUrl(videoId);
+  try {
+    if (navigator.share) await navigator.share({ title: currentVideoObj?.snippet?.title || 'IndTube Video', text: 'IndTube par video dekhein', url });
+    else if (navigator.clipboard?.writeText) { await navigator.clipboard.writeText(url); alert('IndTube video link copy ho gaya.'); }
+    else prompt('IndTube video link copy karein:', url);
+  } catch (error) {
+    if (error?.name !== 'AbortError') prompt('IndTube video link copy karein:', url);
+  }
+}
+
+// Open shared IndTube URLs directly in the native IndTube player.
+async function openSharedIndTubeVideo() {
+  const params = new URLSearchParams(location.search);
+  const sharedId = params.get('v') || params.get('indtube_video');
+  if (!sharedId) return;
+  const status = document.getElementById('watchVideoTitle');
+  if (status) status.textContent = 'IndTube video load ho raha hai...';
+  try {
+    const { data: row, error } = await indSupabase.from('videos')
+      .select('*').eq('id', sharedId).eq('status', 'published').maybeSingle();
+    if (error) throw error;
+    if (!row || !row.video_url) throw new Error('Video nahi mila ya publish nahi hai.');
+    const snippet = {
+      title: row.title || 'IndTube Video',
+      description: row.description || '',
+      channelTitle: row.channel_name || row.creator_name || 'IndTube Creator',
+      channelId: row.user_id || '',
+      publishedAt: row.created_at || '',
+      viewCount: row.views_count || row.view_count || 0,
+      thumbnails: row.thumbnail_url ? { high: { url: row.thumbnail_url } } : {},
+      video_url: row.video_url,
+      __indtubeSupabase: true,
+      __indtubeVideoType: row.video_type || 'long'
+    };
+    openWatchScreen(String(row.id), snippet);
+    // Remove the query from the visible address while retaining the normal app route.
+    try { history.replaceState({ ...(history.state || {}), indtubeView: 'watch', indtubeWatch: true }, '', location.pathname + '#watch'); } catch (_) {}
+  } catch (error) {
+    console.error('IndTube shared video open failed:', error);
+    alert('IndTube video open nahi hua: ' + (error.message || 'Video unavailable'));
+  }
+}
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', openSharedIndTubeVideo, { once: true });
+} else {
+  setTimeout(openSharedIndTubeVideo, 0);
 }
 
 function toggleSaveWatchLater() {
@@ -3745,12 +3824,12 @@ function reportCurrentShort() {
 async function copyCurrentShortLink() {
   const id = getCurrentShortId();
   if (!id) return;
-  const link = 'https://www.youtube.com/shorts/' + encodeURIComponent(id);
+  const link = makeIndTubeShareUrl(id);
   closeShortMoreMenu();
   try {
     if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(link);
     else { const field = document.createElement('textarea'); field.value = link; document.body.appendChild(field); field.select(); document.execCommand('copy'); field.remove(); }
-    shortMoreToast('Short link copied');
+    shortMoreToast('IndTube Short link copied');
   } catch (_) { shortMoreToast(link); }
 }
 document.addEventListener('click', event => {
@@ -3794,17 +3873,15 @@ function submitShortComment() {
 async function shareCurrentShortIndTube() {
   const id = getCurrentShortId();
   if (!id) return;
-  const url = `https://www.youtube.com/shorts/${encodeURIComponent(id)}`;
+  const url = makeIndTubeShareUrl(id);
   try {
-    if (navigator.share) await navigator.share({ title: 'IndTube Short', url });
+    if (navigator.share) await navigator.share({ title: 'IndTube Short', text: 'IndTube par Short dekhein', url });
     else if (navigator.clipboard?.writeText) {
       await navigator.clipboard.writeText(url);
-      shortMoreToast('Short link copied');
-    } else {
-      prompt('Copy this Short link:', url);
-    }
+      shortMoreToast('IndTube Short link copied');
+    } else prompt('IndTube Short link copy karein:', url);
   } catch (error) {
-    if (error?.name !== 'AbortError') prompt('Copy this Short link:', url);
+    if (error?.name !== 'AbortError') prompt('IndTube Short link copy karein:', url);
   }
 }
 
@@ -3851,158 +3928,23 @@ function saveCurrentShort() {
 function getFriendlyApiError(error) { return explainApiError(error); }
 
 
-/* Instagram-style Shorts deck: keep the next iframe loaded before the swipe. */
+/* Legacy iframe Shorts deck disabled; Supabase native video renderer is active. */
 let indTubeShortSlots = [];
 let indTubeActiveShortSlot = -1;
 let indTubeShortSlotIds = ['', ''];
 let indTubeShortDeckOrigin = '';
 let indTubeShortDeckReferrer = '';
 
-function ensureIndTubeShortSlots() {
-  const host = document.getElementById('shortsIframeContainer');
-  if (!host) return false;
-  if (indTubeShortSlots.length === 2 && indTubeShortSlots.every(x => x?.isConnected)) return true;
-  host.innerHTML = '';
-  indTubeShortSlots = [];
-  indTubeShortSlotIds = ['', ''];
-  indTubeActiveShortSlot = -1;
-  for (let i = 0; i < 2; i++) {
-    const frame = document.createElement('iframe');
-    frame.className = 'indtube-short-slot';
-    frame.dataset.slot = String(i);
-    frame.title = i === 0 ? 'Current Short' : 'Preloaded next Short';
-    frame.referrerPolicy = 'origin';
-    frame.allow = 'autoplay; encrypted-media; picture-in-picture';
-    frame.allowFullscreen = true;
-    frame.loading = 'eager';
-    frame.setAttribute('playsinline', '');
-    host.appendChild(frame);
-    indTubeShortSlots.push(frame);
-  }
-  return true;
-}
-
-function indTubeShortEmbedUrl(id, muted) {
-  return `https://www.youtube.com/embed/${encodeURIComponent(id)}?autoplay=1&mute=${muted ? 1 : 0}&playsinline=1&loop=1&playlist=${encodeURIComponent(id)}&rel=0&controls=0&disablekb=1&fs=0&iv_load_policy=3&enablejsapi=1${indTubeShortDeckOrigin}&widget_referrer=${indTubeShortDeckReferrer}`;
-}
-
-function loadIndTubeShortSlot(slot, id, muted) {
-  const frame = indTubeShortSlots[slot];
-  if (!frame || !id) return;
-  if (indTubeShortSlotIds[slot] === id && frame.src) return;
-  try {
-    frame.contentWindow?.postMessage(JSON.stringify({event:'command',func:'pauseVideo',args:[]}), '*');
-  } catch (_) {}
-  indTubeShortSlotIds[slot] = id;
-  frame.src = indTubeShortEmbedUrl(id, muted);
-}
-
-function commandIndTubeShortFrame(frame, func) {
-  if (!frame?.contentWindow) return;
-  try { frame.contentWindow.postMessage(JSON.stringify({event:'command',func,args:[]}), '*'); } catch (_) {}
-}
-
-// A promoted preloaded Short must be unmuted and started as soon as it becomes active.
-// Retry briefly because YouTube's iframe player can finish initializing after the swipe.
-function startIndTubeShortWithSound(slot) {
-  const frame = indTubeShortSlots[slot];
-  if (!frame) return;
-  let attempts = 0;
-  const sendAudioCommands = () => {
-    if (indTubeActiveShortSlot !== slot || !frame.isConnected) return;
-    attempts++;
-    try {
-      // Commands are sent to the existing player; never change frame.src here.
-      frame.contentWindow?.postMessage(JSON.stringify({event:'command',func:'unMute',args:[]}), '*');
-      frame.contentWindow?.postMessage(JSON.stringify({event:'command',func:'setVolume',args:[100]}), '*');
-      frame.contentWindow?.postMessage(JSON.stringify({event:'command',func:'playVideo',args:[]}), '*');
-    } catch (_) {}
-    if (attempts < 16) setTimeout(sendAudioCommands, 350);
-  };
-  // Wait for the iframe's player document, then retry while it initializes.
-  frame.addEventListener('load', sendAudioCommands, { once:true });
-  sendAudioCommands();
-}
-
-function kickIndTubeShortAudioFromGesture() {
-  const frame = indTubeShortSlots[indTubeActiveShortSlot];
-  if (!frame?.contentWindow) return;
-  // Send sound/play commands immediately inside the user's swipe gesture.
-  // This gives mobile browsers the best chance to allow audible playback.
-  for (const func of ['unMute', 'setVolume', 'playVideo']) {
-    try { frame.contentWindow.postMessage(JSON.stringify({event:'command',func,args:func==='setVolume'?[100]:[]}), '*'); } catch (_) {}
-  }
-  setIndTubeShortsPauseUI(false);
-}
-
-function activateIndTubeShort(id, origin, referrer) {
-  if (!ensureIndTubeShortSlots()) return;
-  indTubeShortDeckOrigin = origin || '';
-  indTubeShortDeckReferrer = referrer || '';
-  let slot = indTubeShortSlotIds.indexOf(id);
-  if (slot < 0) {
-    slot = indTubeActiveShortSlot === 0 ? 1 : 0;
-    loadIndTubeShortSlot(slot, id, false);
-  } else if (slot !== indTubeActiveShortSlot) {
-    // Keep the already-buffered iframe. Reloading it here causes a black flash
-    // on mobile while YouTube rebuilds the player. Unmute it in-place instead.
-    commandIndTubeShortFrame(indTubeShortSlots[indTubeActiveShortSlot], 'pauseVideo');
-  }
-
-  const oldSlot = indTubeActiveShortSlot;
-  // Animate the whole Short in the swipe direction (next rises, previous descends).
-  const swipeDirection = window.indTubeShortDirection === 'down' ? 'down' : 'up';
-  const shortContainer = document.getElementById('shortsIframeContainer');
-  if (shortContainer) shortContainer.dataset.swipeDirection = swipeDirection;
-  document.documentElement.dataset.shortDirection = swipeDirection;
-  if (oldSlot >= 0 && oldSlot !== slot) {
-    const outgoing = indTubeShortSlots[oldSlot];
-    outgoing.classList.remove('is-active', 'is-preloaded', 'is-entering-bottom');
-    outgoing.classList.add(swipeDirection === 'down' ? 'is-exiting-bottom' : 'is-exiting-top');
-    outgoing.style.zIndex = '3';
-    setTimeout(() => {
-      if (outgoing.isConnected) {
-        outgoing.classList.remove('is-exiting-top', 'is-exiting-bottom');
-        outgoing.classList.add('is-preloaded');
-        outgoing.style.zIndex = '1';
-      }
-    }, 340);
-  }
-  indTubeActiveShortSlot = slot;
-  const incoming = indTubeShortSlots[slot];
-  incoming.classList.remove('is-preloaded', 'is-exiting-top', 'is-exiting-bottom', 'is-entering-bottom', 'is-entering-top');
-  incoming.classList.add(swipeDirection === 'down' ? 'is-entering-top' : 'is-entering-bottom');
-  // Force the starting position to be applied before transitioning to the screen.
-  incoming.style.zIndex = '2';
-  void incoming.offsetHeight;
-  requestAnimationFrame(() => {
-    if (indTubeActiveShortSlot === slot) {
-      incoming.classList.remove('is-entering-bottom', 'is-entering-top');
-      incoming.classList.add('is-active');
-    }
-  });
-  indTubeShortSlots.forEach((frame, i) => {
-    if (i !== slot && i !== oldSlot) {
-      frame.classList.remove('is-active', 'is-exiting-top', 'is-entering-bottom');
-      frame.classList.add('is-preloaded');
-      frame.style.zIndex = '1';
-    }
-  });
-  if (oldSlot !== slot) {
-    setIndTubeShortsPauseUI(false);
-    // Preloaded players start muted; immediately enable sound on promotion.
-    startIndTubeShortWithSound(slot);
-  }
-
-  // Prepare the next item while the current one is already visible.
-  const nextItem = shortsList[shortsIndex + 1];
-  const nextId = nextItem ? getVideoId(nextItem) : '';
-  if (nextId) {
-    const preloadSlot = slot === 0 ? 1 : 0;
-    if (indTubeShortSlotIds[preloadSlot] !== nextId) {
-      loadIndTubeShortSlot(preloadSlot, nextId, true);
-    }
-  }
+function ensureIndTubeShortSlots() { return false; }
+function indTubeShortEmbedUrl() { return ''; }
+function loadIndTubeShortSlot() { return false; }
+function commandIndTubeShortFrame() { return false; }
+function startIndTubeShortWithSound() { return false; }
+function kickIndTubeShortAudioFromGesture() { return false; }
+function activateIndTubeShort() {
+  // Legacy YouTube iframe Shorts deck disabled. Supabase native Shorts renderer
+  // (window.showCurrentShort) owns playback and preloading.
+  return false;
 }
 
 function showCurrentShort() {
@@ -5325,6 +5267,7 @@ document.addEventListener('DOMContentLoaded',()=>{const d=channelData();if(d.nam
      toggleIndTubeLandscape(), preventing Android's 127.0.0.1 fullscreen hint
      from appearing during normal feed scrolling. -->
 
+<!-- IndTube view-count refresh patch: reads videos.views_count after each successful view RPC. -->
 </body>
 </html>
 <style>.indtube-subscription-channel-strip button:focus-visible{outline:2px solid var(--accent,#ff6a00);outline-offset:3px;border-radius:12px}.indtube-subscription-channel-strip button:hover{opacity:.86}</style>
@@ -6036,9 +5979,12 @@ html[data-short-direction="down"] .shorts-comment-footer.indtube-short-ui-enter 
       }
     });
     if (typeof currentVideoObj !== 'undefined' && String(currentVideoObj?.id) === id) {
+      const snippet = currentVideoObj.snippet || {};
+      snippet.viewCount = Number(count) || 0;
+      const viewsEl = byId('watchViewsCount');
+      if (viewsEl) viewsEl.textContent = Math.max(0, Number(count) || 0).toLocaleString('en-IN');
       const sub = byId('watchVideoSubtext');
       if (sub) {
-        const snippet = currentVideoObj.snippet || {};
         const age = snippet.publishedAt && typeof indTubeTimeAgo === 'function'
           ? indTubeTimeAgo(snippet.publishedAt) : '';
         sub.textContent = (snippet.channelTitle || 'IndTube Creator') + ' • ' + formatViews(count) + (age ? ' • ' + age : '');
@@ -6053,18 +5999,47 @@ html[data-short-direction="down"] .shorts-comment-footer.indtube-short-ui-enter 
     try {
       const client = db();
       if (!client) throw new Error('Supabase client unavailable');
-      const { data, error } = await client.rpc('indtube_increment_video_view', {
+      const { data: rpcData, error } = await client.rpc('indtube_increment_video_view', {
         p_video_id: id,
         p_viewer_key: viewerKey(),
         p_event_id: eventId
       });
       if (error) throw error;
-      const count = Number(data);
-      if (!Number.isFinite(count)) throw new Error('View counter returned an invalid count');
+
+      // RPC return types vary (bigint, numeric string, or JSON). Do not reject
+      // a successful increment just because its response is not a plain number.
+      let count = NaN;
+      if (typeof rpcData === 'number' || typeof rpcData === 'string') count = Number(rpcData);
+      else if (rpcData && typeof rpcData === 'object') {
+        count = Number(rpcData.views_count ?? rpcData.view_count ?? rpcData.views ?? rpcData.count);
+      }
+
+      // Read the authoritative value after the RPC so both the feed and watch
+      // screen immediately show the database count, even when RPC returns void/JSON.
+      const { data: row, error: readError } = await client.from('videos')
+        .select('views_count').eq('id', id).maybeSingle();
+      if (!readError && row && row.views_count !== null && row.views_count !== undefined) {
+        count = Number(row.views_count);
+      }
+      if (!Number.isFinite(count) || count < 0) {
+        throw readError || new Error('View counter returned no usable count');
+      }
       updateViewLabels(id, count);
+      const statusEl = document.getElementById('watchVideoSubtext');
+      if (statusEl) {
+        statusEl.title = 'IndTube view count saved to Supabase';
+        statusEl.dataset.viewSaveError = '';
+      }
       return true;
     } catch (error) {
       console.warn('IndTube view counter failed:', error);
+      const statusEl = document.getElementById('watchVideoSubtext');
+      if (statusEl) {
+        const detail = String(error?.message || error || 'Unknown Supabase error');
+        statusEl.dataset.viewSaveError = detail;
+        statusEl.title = 'View count save failed: ' + detail;
+        statusEl.textContent = (statusEl.textContent || 'IndTube video') + ' • Views save failed';
+      }
       return false;
     } finally {
       viewPendingEvents.delete(eventId);
@@ -6146,8 +6121,11 @@ html[data-short-direction="down"] .shorts-comment-footer.indtube-short-ui-enter 
         const wallDelta = Math.max(0, (now - lastWallTime) / 1000);
         // Count only actual forward playback, not buffering, seeking, or background jumps.
         // Sampling every 250ms avoids depending on Android's irregular timeupdate events.
-        if (mediaDelta > 0 && mediaDelta <= 1.5 && wallDelta > 0 && wallDelta <= 1.5) {
-          watchedSeconds += Math.min(mediaDelta, wallDelta + 0.15);
+        // Android browsers can delay timers while a video is still playing.
+        // Accept longer sampling gaps, but cap counted time to elapsed wall time
+        // so seeking or a sudden currentTime jump cannot manufacture views.
+        if (mediaDelta > 0 && mediaDelta <= 4 && wallDelta > 0 && wallDelta <= 5) {
+          watchedSeconds += Math.min(mediaDelta, wallDelta + 0.25);
         }
       }
       lastMediaTime = current;
@@ -6436,3 +6414,51 @@ html[data-short-direction="down"] .shorts-comment-footer.indtube-short-ui-enter 
 })();
 </script>
 
+
+<!-- IndTube Shorts: stop all Shorts audio immediately when leaving the Shorts screen. -->
+<script id="indtube-shorts-stop-on-back-fix">
+(function () {
+  'use strict';
+  function stopShortsPlayback(clearSource) {
+    const host = document.getElementById('shortsIframeContainer');
+    if (!host) return;
+    host.querySelectorAll('video, audio').forEach(function (media) {
+      try { media.pause(); } catch (_) {}
+      try { media.muted = true; media.defaultMuted = true; media.volume = 0; } catch (_) {}
+      if (clearSource && media.tagName === 'VIDEO') {
+        try {
+          media.removeAttribute('src');
+          media.querySelectorAll('source').forEach(source => source.removeAttribute('src'));
+          media.load();
+        } catch (_) {}
+      }
+    });
+    if (clearSource) {
+      try { host.replaceChildren(); } catch (_) { host.innerHTML = ''; }
+    }
+    try { window.setIndTubeShortsPauseUI?.(true); } catch (_) {}
+  }
+
+  // Android/browser Back: the existing popstate handler restores the destination.
+  // If that destination is not Shorts, stop and unload the active/preloaded Shorts.
+  window.addEventListener('popstate', function (event) {
+    const destination = event.state?.indtubeView || 'home';
+    if (destination !== 'shorts') stopShortsPlayback(true);
+  }, true);
+
+  // Also cover the on-screen Shorts back button and other code paths that close Shorts.
+  const previousCloseShorts = window.closeShorts;
+  window.closeShorts = function () {
+    stopShortsPlayback(true);
+    if (typeof previousCloseShorts === 'function') return previousCloseShorts.apply(this, arguments);
+  };
+
+  // Stop playback when the page is backgrounded/hidden, preventing audio leakage
+  // if Android WebView changes screens without delivering a normal Back event.
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden && !document.getElementById('shortsViewer')?.classList.contains('active')) {
+      stopShortsPlayback(false);
+    }
+  });
+})();
+</script>

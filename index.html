@@ -1395,7 +1395,7 @@ function indTubeIsSafeVideoItem(item) {
 </section>
 
 <div id="myVideosPage" class="indtube-fullpage" style="display:none"><div class="indtube-page-head"><button onclick="closeMyVideosPage()">‹</button><strong>My Video Upload's</strong></div><div style="padding:16px"><div id="myUploadsList" class="feed-container" style="padding:0"></div></div></div>
-<div id="videoUploadPage" class="indtube-fullpage" style="display:none"><div class="indtube-page-head"><button onclick="closeVideoUploadPage()">‹</button><strong>Create video</strong><button onclick="closeVideoUploadPage()">✕</button></div><div style="padding:16px"><button class="btn-primary" onclick="document.getElementById('filePicker').click()">＋ Select video</button><p id="selectedVideoName" style="color:var(--text-secondary);margin:10px 0">No video selected</p><label>Title</label><input id="uploadTitleInput" type="text" maxlength="120" placeholder="Add a title" style="width:100%;padding:14px;border-radius:10px;background:var(--surface);color:var(--text);border:1px solid #444"><label>Description</label><textarea id="uploadDescriptionInput" rows="5" placeholder="Tell viewers about your video" style="width:100%;padding:14px;border-radius:10px;background:var(--surface);color:var(--text);border:1px solid #444"></textarea><p id="uploadProgressText"></p><button id="publishVideoButton" class="btn-primary" onclick="publishSelectedVideo()">Upload video</button></div></div>
+<div id="videoUploadPage" class="indtube-fullpage" style="display:none"><div class="indtube-page-head"><button onclick="closeVideoUploadPage()">‹</button><strong>Create video</strong><button onclick="closeVideoUploadPage()">✕</button></div><div style="padding:16px"><button class="btn-primary" onclick="document.getElementById('filePicker').click()">＋ Select video</button><p id="selectedVideoName" style="color:var(--text-secondary);margin:10px 0">No video selected</p><label>Thumbnail (optional)</label><p style="color:var(--text-secondary);font-size:12px;margin:5px 0 10px">Apni photo chun sakte hain. Agar nahi chunenge to video se automatic frame banega.</p><button type="button" class="action-pill" onclick="document.getElementById('thumbnailPicker').click()">🖼️ Choose Thumbnail</button><input type="file" id="thumbnailPicker" accept="image/jpeg,image/png,image/webp" style="display:none" onchange="handleThumbnailSelected(event)"><p id="selectedThumbnailName" style="color:var(--text-secondary);font-size:12px;margin:8px 0">Automatic thumbnail selected</p><img id="thumbnailPreview" alt="Thumbnail preview" style="display:none;width:150px;max-height:220px;object-fit:contain;border-radius:10px;margin:8px 0;background:#222"><label>Title</label><input id="uploadTitleInput" type="text" maxlength="120" placeholder="Add a title" style="width:100%;padding:14px;border-radius:10px;background:var(--surface);color:var(--text);border:1px solid #444"><label>Description</label><textarea id="uploadDescriptionInput" rows="5" placeholder="Tell viewers about your video" style="width:100%;padding:14px;border-radius:10px;background:var(--surface);color:var(--text);border:1px solid #444"></textarea><p id="uploadProgressText"></p><button id="publishVideoButton" class="btn-primary" onclick="publishSelectedVideo()">Upload video</button></div></div>
 <style>.indtube-fullpage{position:fixed;inset:0;z-index:10050;background:var(--bg);color:var(--text);overflow:auto;padding-bottom:30px}.indtube-page-head{position:sticky;top:0;display:flex;align-items:center;gap:16px;padding:14px;background:var(--surface);border-bottom:1px solid #333;z-index:2}.indtube-page-head button{background:transparent;color:inherit;border:0;font-size:25px}.indtube-page-head strong{font-size:18px;flex:1}#userAvatar{cursor:pointer;overflow:hidden}#userAvatar img{width:100%;height:100%;object-fit:cover;border-radius:50%}</style>
 <input type="file" id="avatarPicker" accept="image/*" style="display:none" onchange="handleAvatarPicked(event)"><input type="file" id="bannerPicker" accept="image/*" style="display:none" onchange="handleBannerPicked(event)">
 <div id="myChannelPage" class="indtube-fullpage youtube-like-page" style="display:none">
@@ -2653,10 +2653,151 @@ async function getIndTubeSession() {
 }
 
 let selectedVideoFile = null;
-function openVideoUploadPage(){document.getElementById('videoUploadPage').style.display='block';selectedVideoFile=null;document.getElementById('selectedVideoName').textContent='No video selected';document.getElementById('uploadTitleInput').value='';document.getElementById('uploadDescriptionInput').value='';document.getElementById('uploadProgressText').textContent='';}
+let selectedThumbnailFile = null;
+
+function openVideoUploadPage(){
+  document.getElementById('videoUploadPage').style.display='block';
+  selectedVideoFile=null; selectedThumbnailFile=null;
+  document.getElementById('selectedVideoName').textContent='No video selected';
+  document.getElementById('selectedThumbnailName').textContent='Automatic thumbnail selected';
+  document.getElementById('thumbnailPreview').style.display='none';
+  document.getElementById('thumbnailPicker').value='';
+  document.getElementById('uploadTitleInput').value='';
+  document.getElementById('uploadDescriptionInput').value='';
+  document.getElementById('uploadProgressText').textContent='';
+}
 function closeVideoUploadPage(){document.getElementById('videoUploadPage').style.display='none';}
-function handleFileSelected(e){const file=e.target.files?.[0];if(!file)return;if(!file.type.startsWith('video/')){alert('Video file select karein.');e.target.value='';return;}if(file.size>100*1024*1024){alert('Abhi upload ki limit 100 MB hai.');e.target.value='';return;}selectedVideoFile=file;document.getElementById('selectedVideoName').textContent=file.name;const t=document.getElementById('uploadTitleInput');if(!t.value)t.value=file.name.replace(/\.[^.]+$/,'');}
-async function publishSelectedVideo(){const file=selectedVideoFile,title=document.getElementById('uploadTitleInput').value.trim(),description=document.getElementById('uploadDescriptionInput').value.trim(),status=document.getElementById('uploadProgressText'),button=document.getElementById('publishVideoButton');if(!file){alert('Pehle video select karein.');return;}if(!title){alert('Video ka title likhein.');return;}button.disabled=true;status.textContent='Account check ho raha hai...';try{const session=await getIndTubeSession();if(!session)return;const safeName=file.name.replace(/[^a-zA-Z0-9._-]/g,'_').slice(-100)||'video.mp4',objectPath=`${session.user.id}/${Date.now()}_${safeName}`;status.textContent='Video upload ho raha hai...';const {error:uploadError}=await indSupabase.storage.from('videos').upload(objectPath,file,{cacheControl:'3600',upsert:false,contentType:file.type});if(uploadError)throw uploadError;const {data:publicData}=indSupabase.storage.from('videos').getPublicUrl(objectPath);const {error:insertError}=await indSupabase.from('videos').insert({user_id:session.user.id,title,description,video_url:publicData.publicUrl,thumbnail_url:'',video_type:(String(selectedUploadType||'long').toLowerCase().includes('short')?'short':'long'),status:'published'});if(insertError){await indSupabase.storage.from('videos').remove([objectPath]);throw insertError;}status.textContent='Upload complete';alert('Video IndTube par upload ho gaya!');closeVideoUploadPage();await renderMyUploads();}catch(err){status.textContent='Upload failed';alert('Upload nahi ho paya: '+(err.message||'Supabase error'));}finally{button.disabled=false;}}
+function handleFileSelected(e){
+  const file=e.target.files?.[0]; if(!file)return;
+  if(!file.type.startsWith('video/')){alert('Video file select karein.');e.target.value='';return;}
+  if(file.size>100*1024*1024){alert('Abhi upload ki limit 100 MB hai.');e.target.value='';return;}
+  selectedVideoFile=file;
+  document.getElementById('selectedVideoName').textContent=file.name;
+  const t=document.getElementById('uploadTitleInput');
+  if(!t.value)t.value=file.name.replace(/\.[^.]+$/,'');
+}
+function handleThumbnailSelected(e){
+  const file=e.target.files?.[0]; if(!file)return;
+  if(!['image/jpeg','image/png','image/webp'].includes(file.type)){
+    alert('JPG, PNG ya WebP image select karein.'); e.target.value=''; return;
+  }
+  if(file.size>8*1024*1024){alert('Thumbnail 8 MB se chhoti honi chahiye.');e.target.value='';return;}
+  selectedThumbnailFile=file;
+  document.getElementById('selectedThumbnailName').textContent='Custom: '+file.name;
+  const preview=document.getElementById('thumbnailPreview');
+  if(preview){preview.src=URL.createObjectURL(file);preview.style.display='block';}
+}
+function createAutomaticThumbnail(videoFile){
+  return new Promise((resolve,reject)=>{
+    const video=document.createElement('video');
+    const objectUrl=URL.createObjectURL(videoFile);
+    let finished=false;
+    const cleanup=()=>{URL.revokeObjectURL(objectUrl);video.removeAttribute('src');video.load();};
+    const fail=(err)=>{if(finished)return;finished=true;cleanup();reject(err||new Error('Video frame read nahi ho paya'));};
+    const capture=()=>{
+      if(finished)return;
+      try{
+        const w=video.videoWidth,h=video.videoHeight;
+        if(!w||!h)throw new Error('Video ka frame available nahi hai');
+        const scale=Math.min(1,1280/Math.max(w,h));
+        const canvas=document.createElement('canvas');
+        canvas.width=Math.max(1,Math.round(w*scale));
+        canvas.height=Math.max(1,Math.round(h*scale));
+        const ctx=canvas.getContext('2d');
+        if(!ctx)throw new Error('Canvas available nahi hai');
+        ctx.drawImage(video,0,0,canvas.width,canvas.height);
+        canvas.toBlob(blob=>{
+          if(finished)return;
+          if(!blob){fail(new Error('Thumbnail image generate nahi hui'));return;}
+          finished=true;cleanup();resolve(blob);
+        },'image/jpeg',0.86);
+      }catch(err){fail(err);}
+    };
+    video.preload='auto'; video.muted=true; video.playsInline=true;
+    video.addEventListener('error',()=>fail(new Error('Is video format se automatic frame nahi ban saka')), {once:true});
+    video.addEventListener('loadedmetadata',()=>{
+      try{
+        const duration=Number(video.duration);
+        const target=Number.isFinite(duration)&&duration>1?Math.min(3,Math.max(0.5,duration*0.12)):0;
+        if(target>0.05){
+          video.addEventListener('seeked',capture,{once:true});
+          video.currentTime=target;
+        }else{
+          video.addEventListener('loadeddata',capture,{once:true});
+          if(video.readyState>=2)capture();
+        }
+      }catch(err){fail(err);}
+    },{once:true});
+    video.src=objectUrl;
+    video.load();
+  });
+}
+async function uploadIndTubeThumbnail(session,file,isCustom){
+  const ext=isCustom?(file.type==='image/png'?'png':file.type==='image/webp'?'webp':'jpg'):'jpg';
+  const path=`${session.user.id}/thumbnails/${Date.now()}_${Math.random().toString(36).slice(2,9)}.${ext}`;
+  const contentType=isCustom?file.type:'image/jpeg';
+  const {error}=await indSupabase.storage.from('videos').upload(path,file,{
+    cacheControl:'31536000',upsert:false,contentType
+  });
+  if(error)throw error;
+  return indSupabase.storage.from('videos').getPublicUrl(path).data.publicUrl;
+}
+async function publishSelectedVideo(){
+  const file=selectedVideoFile;
+  const title=document.getElementById('uploadTitleInput').value.trim();
+  const description=document.getElementById('uploadDescriptionInput').value.trim();
+  const status=document.getElementById('uploadProgressText');
+  const button=document.getElementById('publishVideoButton');
+  if(!file){alert('Pehle video select karein.');return;}
+  if(!title){alert('Video ka title likhein.');return;}
+  button.disabled=true;
+  let uploadedVideoPath='';
+  try{
+    status.textContent='Account check ho raha hai...';
+    const session=await getIndTubeSession();
+    if(!session)return;
+    const safeName=file.name.replace(/[^a-zA-Z0-9._-]/g,'_').slice(-100)||'video.mp4';
+    uploadedVideoPath=`${session.user.id}/${Date.now()}_${safeName}`;
+    status.textContent='Video upload ho raha hai...';
+    const {error:uploadError}=await indSupabase.storage.from('videos').upload(uploadedVideoPath,file,{
+      cacheControl:'3600',upsert:false,contentType:file.type||'video/mp4'
+    });
+    if(uploadError)throw uploadError;
+    const videoUrl=indSupabase.storage.from('videos').getPublicUrl(uploadedVideoPath).data.publicUrl;
+
+    let thumbnailUrl='';
+    if(selectedThumbnailFile){
+      status.textContent='Aapki chuni hui Thumbnail upload ho rahi hai...';
+      thumbnailUrl=await uploadIndTubeThumbnail(session,selectedThumbnailFile,true);
+    }else{
+      status.textContent='Video se automatic Thumbnail ban rahi hai...';
+      const generatedBlob=await createAutomaticThumbnail(file);
+      const generatedFile=new File([generatedBlob],`thumbnail_${Date.now()}.jpg`,{type:'image/jpeg'});
+      thumbnailUrl=await uploadIndTubeThumbnail(session,generatedFile,false);
+    }
+
+    status.textContent='Video details save ho rahi hain...';
+    const {error:insertError}=await indSupabase.from('videos').insert({
+      user_id:session.user.id,title,description,video_url:videoUrl,
+      thumbnail_url:thumbnailUrl,
+      video_type:(String(selectedUploadType||'long').toLowerCase().includes('short')?'short':'long'),
+      status:'published'
+    });
+    if(insertError)throw insertError;
+    status.textContent='Upload complete';
+    alert(selectedThumbnailFile?'Video aur aapki Thumbnail upload ho gayi!':'Video upload ho gaya aur Automatic Thumbnail ban gayi!');
+    closeVideoUploadPage();
+    await renderMyUploads();
+  }catch(err){
+    if(uploadedVideoPath){
+      try{await indSupabase.storage.from('videos').remove([uploadedVideoPath]);}catch(_){}
+    }
+    status.textContent='Upload failed';
+    alert('Upload nahi ho paya: '+(err.message||'Supabase error'));
+  }finally{
+    button.disabled=false;
+  }
+}
 function openMyUploads(){document.getElementById('myVideosPage').style.display='block';renderMyUploads();}
 function closeMyVideosPage(){document.getElementById('myVideosPage').style.display='none';}
 function handleAvatarPicked(e){const file=e.target.files?.[0];if(!file)return;if(!file.type.startsWith('image/')){alert('Image select karein.');return;}if(file.size>2*1024*1024){alert('Logo 2 MB se chhota hona chahiye.');return;}const r=new FileReader();r.onload=()=>{try{localStorage.setItem('indtube_profile_logo',r.result);renderProfileLogo();}catch(_){alert('Image save nahi ho payi. Chhoti image try karein.');}};r.readAsDataURL(file);e.target.value='';}

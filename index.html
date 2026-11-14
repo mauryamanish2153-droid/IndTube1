@@ -6822,3 +6822,80 @@ html[data-short-direction="down"] .shorts-comment-footer.indtube-short-ui-enter 
   background:#000 !important;
 }
 </style>
+
+
+<style id="indtube-shorts-comment-footer-restore-and-fullscreen-final">
+/* Restore the complete Add a comment bar and let the video fill the area
+   above it. Do not reserve an extra safe-area strip outside the footer. */
+#shortsViewer {
+  box-sizing:border-box !important;
+  height:100vh !important;
+  height:100dvh !important;
+  padding:0 !important;
+  gap:0 !important;
+  overflow:hidden !important;
+  justify-content:flex-start !important;
+}
+#shortsViewer .shorts-stage {
+  position:relative !important;
+  flex:1 1 0 !important;
+  width:100% !important;
+  height:auto !important;
+  min-height:0 !important;
+  max-width:none !important;
+  margin:0 !important;
+  padding:0 !important;
+  overflow:hidden !important;
+  background:#000 !important;
+}
+#shortsViewer .shorts-comment-footer {
+  position:relative !important;
+  display:flex !important;
+  flex:0 0 76px !important;
+  width:100% !important;
+  max-width:none !important;
+  height:76px !important;
+  min-height:76px !important;
+  margin:0 !important;
+  padding:10px 18px !important;
+  box-sizing:border-box !important;
+  align-items:center !important;
+  justify-content:center !important;
+  overflow:visible !important;
+  z-index:25 !important;
+  background:#080808 !important;
+  transform:none !important;
+}
+#shortsViewer .shorts-comment-input {
+  display:block !important;
+  width:100% !important;
+  min-width:0 !important;
+  height:48px !important;
+  flex:1 1 auto !important;
+}
+#shortsViewer #shortsIframeContainer {
+  position:absolute !important;
+  inset:0 !important;
+  width:100% !important;
+  height:100% !important;
+  overflow:hidden !important;
+  background:#000 !important;
+}
+/* Native portrait uploads fill the video stage without top/bottom letterbox.
+   object-fit:cover may crop a little from the sides to fill the screen. */
+#shortsViewer #shortsIframeContainer video.indtube-native-short,
+#shortsViewer #shortsIframeContainer video.indtube-short-preload {
+  position:absolute !important;
+  inset:0 !important;
+  width:100% !important;
+  height:100% !important;
+  min-width:100% !important;
+  max-width:none !important;
+  min-height:100% !important;
+  max-height:none !important;
+  transform:none !important;
+  object-fit:cover !important;
+  object-position:center center !important;
+  background:#000 !important;
+}
+</style>

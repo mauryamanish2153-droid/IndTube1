@@ -1241,7 +1241,7 @@ function indTubeIsSafeVideoItem(item) {
         </button>
         <button class="action-pill" id="dislikeBtn" onclick="toggleDislike()" aria-label="Dislike" title="Dislike">
           <svg class="action-icon dislike-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 14V3h4v11h-4ZM13 3H5.8a2 2 0 0 0-1.96 1.61l-1.7 8A2 2 0 0 0 4.1 15H10l-.8 4.1A2.4 2.4 0 0 0 11.55 22L17 14V5a2 2 0 0 0-2-2h-2Z" /></svg>
-          <span>Dislike</span>
+          <span id="dislikeCount">0</span>
         </button>
         <button class="action-pill" onclick="shareVideo()" aria-label="Share" title="Share">
           <svg class="action-icon share-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V3m0 0L7 8m5-5 5 5M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6" /></svg>
@@ -1584,10 +1584,21 @@ function saveLocalLikedVideoIds(ids) {
   try { localStorage.setItem('indtube_liked_video_ids', JSON.stringify([...new Set(ids)])); }
   catch (_) {}
 }
+function getLocalDislikedVideoIds() {
+  try { return JSON.parse(localStorage.getItem('indtube_disliked_video_ids') || '[]'); }
+  catch (_) { return []; }
+}
+function saveLocalDislikedVideoIds(ids) {
+  try { localStorage.setItem('indtube_disliked_video_ids', JSON.stringify([...new Set(ids)])); }
+  catch (_) {}
+}
+let isDisliked = false;
 function updateDisplayedLikeCount() {
   const count = Math.max(0, videoBaseLikeCount + (isLiked ? 1 : 0));
   const el = document.getElementById('likeCount');
+  const dislikeEl = document.getElementById('dislikeCount');
   if (el) el.textContent = formatCompactCount(count);
+  if (dislikeEl) dislikeEl.textContent = formatCompactCount(isDisliked ? 1 : 0);
 }
 
 let subscriptionState = "none";
@@ -2121,6 +2132,8 @@ function openWatchScreen(videoId, snippet = {}) {
   realStatsRequestToken++;
   videoBaseLikeCount = 0;
   isLiked = getLocalLikedVideoIds().includes(videoId);
+  isDisliked = getLocalDislikedVideoIds().includes(videoId);
+  if (isDisliked && isLiked) isLiked = false;
   document.querySelectorAll('.view-section').forEach(x => x.classList.remove('active'));
   document.getElementById('topHeader').style.display='none';
   document.getElementById('categoryBar').style.display='none';
@@ -2170,7 +2183,7 @@ function openWatchScreen(videoId, snippet = {}) {
   if(channelName) channelName.onclick=openChannel;
   if(snippet.channelId) hydrateChannelAvatars([{snippet}]);
   const lb=document.getElementById('likeBtn'); if(lb)lb.classList.toggle('liked',isLiked);
-  document.getElementById('dislikeBtn')?.classList.remove('active');
+  document.getElementById('dislikeBtn')?.classList.toggle('active',isDisliked);
   const save=document.getElementById('saveBtn'); if(save){const label=save.querySelector('#saveBtnLabel');if(label)label.textContent=watchLaterList.some(v=>v.id===videoId)?'Saved':'Watch Later';}
   subscriptionState=subscriptions[snippet.channelId]||'none'; updateSubscriptionUI(); updateDisplayedLikeCount(); renderComments();
   loadRealVideoStats(videoId,snippet.channelId||'');
@@ -2970,7 +2983,7 @@ try { if ('scrollRestoration' in history) history.scrollRestoration = 'manual'; 
 window.addEventListener('popstate', (event) => {
   const watch = document.getElementById('watchSection');
   const shorts = document.getElementById('shortsViewer');
-  const target = (event.state?.indtubeView === 'search' || event.state?.indtubeView === 'shorts' || event.state?.indtubeView === 'settings' || event.state?.indtubeView === 'watchLater') ? event.state.indtubeView : 'home';
+  const target = (event.state?.indtubeView === 'watch' || event.state?.indtubeView === 'search' || event.state?.indtubeView === 'shorts' || event.state?.indtubeView === 'settings' || event.state?.indtubeView === 'watchLater') ? event.state.indtubeView : 'home';
 
   // Back from a full video: move the SAME player element into mini mode and
   // restore the screen that was underneath it (search, Shorts, settings, etc.).
@@ -2992,7 +3005,23 @@ window.addEventListener('popstate', (event) => {
     if (header) header.style.display = 'none';
     if (category) category.style.display = 'none';
     setActiveNav('navShorts');
-    if (!document.querySelector('#shortsIframeContainer iframe')) showCurrentShort();
+    if (!document.querySelector('#shortsIframeContainer iframe, #shortsIframeContainer video')) showCurrentShort();
+  } else if (target === 'watch') {
+    // Returning from Shorts to a Long video restores the existing watch page
+    // and the same player element, preserving its playback position.
+    document.getElementById('watchSection')?.classList.add('active');
+    if (header) header.style.display = 'none';
+    if (category) category.style.display = 'none';
+    setActiveNav('navHome');
+    const mainPlayer = document.getElementById('mainPlayerContainer');
+    const nativeVideo = mainPlayer?.querySelector('video');
+    if (nativeVideo) {
+      try { nativeVideo.play()?.catch(() => {}); } catch (_) {}
+    } else {
+      mainPlayer?.querySelectorAll('iframe').forEach(frame => {
+        try { frame.contentWindow?.postMessage(JSON.stringify({event:'command',func:'playVideo',args:''}), '*'); } catch (_) {}
+      });
+    }
   } else if (target === 'settings' || target === 'watchLater') {
     const id = target === 'settings' ? 'youSection' : 'watchLaterSection';
     document.getElementById(id)?.classList.add('active');
@@ -3188,27 +3217,33 @@ function setActiveNav(id) {
 function toggleLike() {
   if (!currentVideoObj) return;
   isLiked = !isLiked;
-  const likedIds = getLocalLikedVideoIds().filter(id => id !== currentVideoObj.id);
-  if (isLiked) likedIds.push(currentVideoObj.id);
+  if (isLiked) isDisliked = false;
+  const videoId = currentVideoObj.id;
+  const likedIds = getLocalLikedVideoIds().filter(id => id !== videoId);
+  if (isLiked) likedIds.push(videoId);
   saveLocalLikedVideoIds(likedIds);
-
-  const likeBtn = document.getElementById('likeBtn');
-  const dislikeBtn = document.getElementById('dislikeBtn');
-  likeBtn.classList.toggle('liked', isLiked);
-  if (isLiked) dislikeBtn.classList.remove('active');
+  const dislikedIds = getLocalDislikedVideoIds().filter(id => id !== videoId);
+  if (isDisliked) dislikedIds.push(videoId);
+  saveLocalDislikedVideoIds(dislikedIds);
+  document.getElementById('likeBtn')?.classList.toggle('liked', isLiked);
+  document.getElementById('dislikeBtn')?.classList.toggle('active', isDisliked);
   updateDisplayedLikeCount();
 }
 
 function toggleDislike() {
-  const btn = document.getElementById('dislikeBtn');
-  const isDisliked = !btn.classList.contains('active');
-  btn.classList.toggle('active', isDisliked);
-  if (isDisliked && isLiked) {
-    isLiked = false;
-    saveLocalLikedVideoIds(getLocalLikedVideoIds().filter(id => id !== currentVideoObj?.id));
-    document.getElementById('likeBtn').classList.remove('liked');
-    updateDisplayedLikeCount();
-  }
+  if (!currentVideoObj) return;
+  isDisliked = !isDisliked;
+  if (isDisliked) isLiked = false;
+  const videoId = currentVideoObj.id;
+  const dislikedIds = getLocalDislikedVideoIds().filter(id => id !== videoId);
+  if (isDisliked) dislikedIds.push(videoId);
+  saveLocalDislikedVideoIds(dislikedIds);
+  const likedIds = getLocalLikedVideoIds().filter(id => id !== videoId);
+  if (isLiked) likedIds.push(videoId);
+  saveLocalLikedVideoIds(likedIds);
+  document.getElementById('dislikeBtn')?.classList.toggle('active', isDisliked);
+  document.getElementById('likeBtn')?.classList.toggle('liked', isLiked);
+  updateDisplayedLikeCount();
 }
 
 function makeIndTubeShareUrl(videoId) {
@@ -6897,5 +6932,168 @@ html[data-short-direction="down"] .shorts-comment-footer.indtube-short-ui-enter 
   object-fit:cover !important;
   object-position:center center !important;
   background:#000 !important;
+}
+</style>
+
+<style id="indtube-shorts-preserve-uploaded-aspect-ratio-final">
+/* Preserve each uploaded Short's original frame: 9:16 stays portrait,
+   16:9 stays landscape. Never zoom, stretch, or crop to fill the stage. */
+#shortsViewer #shortsIframeContainer video.indtube-native-short,
+#shortsViewer #shortsIframeContainer video.indtube-short-preload {
+  position:absolute !important;
+  inset:0 !important;
+  width:100% !important;
+  height:100% !important;
+  min-width:0 !important;
+  min-height:0 !important;
+  max-width:100% !important;
+  max-height:100% !important;
+  transform:none !important;
+  object-fit:contain !important;
+  object-position:center center !important;
+  background:#000 !important;
+}
+</style>
+
+
+<!-- Instagram-style Shorts seek/progress line -->
+<style id="indtube-shorts-seekbar-style">
+#shortsViewer .indtube-short-seekbar{
+  position:absolute!important;left:0!important;right:0!important;bottom:0!important;
+  height:18px!important;padding:8px 0!important;box-sizing:border-box!important;
+  z-index:60!important;display:block!important;cursor:pointer!important;
+  touch-action:pan-x!important;background:transparent!important;
+}
+#shortsViewer .indtube-short-seekbar-track{
+  position:relative!important;width:100%!important;height:2px!important;
+  background:rgba(255,255,255,.42)!important;overflow:hidden!important;
+}
+#shortsViewer .indtube-short-seekbar-fill{
+  display:block!important;width:0%;height:100%!important;
+  background:#fff!important;border-radius:2px!important;
+}
+#shortsViewer .indtube-short-seekbar:active .indtube-short-seekbar-track{height:3px!important;}
+</style>
+<script id="indtube-shorts-seekbar-script">
+(function(){
+  'use strict';
+  let boundVideo=null, bar=null, fill=null, dragging=false;
+
+  function getVideo(){
+    return document.querySelector('#shortsViewer #shortsIframeContainer video.indtube-native-short, #shortsViewer #shortsIframeContainer video');
+  }
+  function ensureBar(){
+    const footer=document.querySelector('#shortsViewer .shorts-comment-footer');
+    if(!footer) return false;
+    if(!bar || !bar.isConnected){
+      bar=document.createElement('div');
+      bar.className='indtube-short-seekbar';
+      bar.setAttribute('role','slider');
+      bar.setAttribute('aria-label','Video progress');
+      bar.setAttribute('aria-valuemin','0');
+      bar.setAttribute('aria-valuemax','100');
+      bar.setAttribute('aria-valuenow','0');
+      bar.innerHTML='<div class="indtube-short-seekbar-track"><span class="indtube-short-seekbar-fill"></span></div>';
+      footer.appendChild(bar);
+      fill=bar.querySelector('.indtube-short-seekbar-fill');
+    }
+    return true;
+  }
+  function update(){
+    const video=getVideo();
+    if(!video || !ensureBar()) return;
+    const d=Number(video.duration), t=Number(video.currentTime);
+    const pct=Number.isFinite(d)&&d>0 ? Math.max(0,Math.min(100,t/d*100)) : 0;
+    if(fill) fill.style.width=pct+'%';
+    bar.setAttribute('aria-valuenow',String(Math.round(pct)));
+  }
+  function seekAt(e){
+    const video=getVideo();
+    if(!video || !ensureBar()) return;
+    const d=Number(video.duration), rect=bar.getBoundingClientRect();
+    if(!Number.isFinite(d)||d<=0||rect.width<=0) return;
+    const x=Math.max(0,Math.min(rect.width,e.clientX-rect.left));
+    try { video.currentTime=(x/rect.width)*d; } catch(_){}
+    update();
+  }
+  function bindVideo(){
+    const video=getVideo();
+    if(!video || !ensureBar()) return;
+    if(video!==boundVideo){
+      boundVideo=video;
+      ['timeupdate','durationchange','loadedmetadata','canplay','seeked'].forEach(ev=>video.addEventListener(ev,update));
+      video.addEventListener('emptied',update);
+    }
+    update();
+  }
+  function bindBar(){
+    if(!ensureBar() || bar.dataset.seekBound==='1') return;
+    bar.dataset.seekBound='1';
+    bar.addEventListener('pointerdown',e=>{
+      e.preventDefault(); e.stopPropagation(); dragging=true;
+      try{bar.setPointerCapture(e.pointerId);}catch(_){}
+      seekAt(e);
+    });
+    bar.addEventListener('pointermove',e=>{
+      if(!dragging)return;
+      e.preventDefault();e.stopPropagation();seekAt(e);
+    });
+    const end=e=>{dragging=false;if(e)e.stopPropagation();};
+    bar.addEventListener('pointerup',end);
+    bar.addEventListener('pointercancel',end);
+    bar.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();seekAt(e);});
+  }
+  function attach(){ bindBar(); bindVideo(); }
+  function start(){
+    attach();
+    const host=document.getElementById('shortsIframeContainer');
+    if(host && !host.dataset.indtubeSeekbarObserver){
+      host.dataset.indtubeSeekbarObserver='1';
+      new MutationObserver(attach).observe(host,{childList:true,subtree:true});
+    }
+    const footer=document.querySelector('#shortsViewer .shorts-comment-footer');
+    if(footer && !footer.dataset.indtubeSeekbarObserver){
+      footer.dataset.indtubeSeekbarObserver='1';
+      new MutationObserver(attach).observe(footer,{childList:true});
+    }
+    document.addEventListener('click',e=>{
+      if(e.target.closest('#shortsViewer')) requestAnimationFrame(attach);
+    },true);
+    document.addEventListener('visibilitychange',()=>{if(!document.hidden)attach();});
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',start,{once:true});
+  else start();
+})();
+</script>
+
+
+<style id="indtube-shorts-seekbar-at-comment-border-final">
+/* Put the progress line exactly on the top edge of Add a comment footer,
+   not over the video image. Keep a slim touch target for scrubbing. */
+#shortsViewer .shorts-comment-footer{position:relative!important;}
+#shortsViewer .shorts-comment-footer .indtube-short-seekbar{
+  position:absolute!important;left:0!important;right:0!important;top:0!important;bottom:auto!important;
+  width:100%!important;height:10px!important;padding:4px 0!important;
+  margin:0!important;box-sizing:border-box!important;z-index:80!important;
+  background:transparent!important;touch-action:pan-x!important;
+}
+#shortsViewer .shorts-comment-footer .indtube-short-seekbar-track{
+  width:100%!important;height:2px!important;margin:0!important;
+  background:rgba(255,255,255,.42)!important;
+}
+#shortsViewer .shorts-comment-footer .indtube-short-seekbar-fill{
+  height:100%!important;background:#fff!important;
+}
+</style>
+
+
+<style id="indtube-shorts-seekbar-border-alignment-final">
+/* Raise the thin progress line slightly so it sits flush on the comment bar's top border. */
+#shortsViewer .shorts-comment-footer .indtube-short-seekbar{
+  top:-8px!important; bottom:auto!important; height:10px!important;
+  padding:4px 0!important; left:0!important; right:0!important;
+}
+#shortsViewer .shorts-comment-footer .indtube-short-seekbar-track{
+  height:2px!important; margin:0!important;
 }
 </style>

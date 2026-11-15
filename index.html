@@ -2244,8 +2244,8 @@ function openWatchScreen(videoId, snippet = {}) {
   if (title) { title.textContent=(snippet.title||'Video')+' ▾'; title.setAttribute('aria-expanded','false'); }
   const panel=document.getElementById('videoDescriptionPanel'); if(panel) panel.hidden=true;
   const desc=document.getElementById('videoDescriptionText'); if(desc) desc.textContent=snippet.description||'इस वीडियो के लिए description उपलब्ध नहीं है।';
-  const subtext=document.getElementById('watchVideoSubtext'); if(subtext){const watchCount=Math.max(0,Number(snippet.viewCount)||0);const watchViews=snippet.__indtubeSupabase?(watchCount>=1000000?(watchCount/1000000).toFixed(1).replace(/\.0$/,'')+'M views':watchCount>=1000?(watchCount/1000).toFixed(1).replace(/\.0$/,'')+'K views':Math.floor(watchCount).toLocaleString('en-IN')+' views'):'';subtext.textContent=[snippet.channelTitle||'IndTube Creator',watchViews,snippet.publishedAt?indTubeTimeAgo(snippet.publishedAt):''].filter(Boolean).join(' • ');subtext.dataset.videoId=videoId;}
-  const channelName=document.getElementById('channelNameTag'); if(channelName) channelName.textContent=snippet.channelTitle||'YouTube Channel';
+  const subtext=document.getElementById('watchVideoSubtext'); if(subtext){const watchCount=Math.max(0,Number(snippet.viewCount)||0);const watchViews=snippet.__indtubeSupabase?(watchCount>=1000000?(watchCount/1000000).toFixed(1).replace(/\.0$/,'')+'M views':watchCount>=1000?(watchCount/1000).toFixed(1).replace(/\.0$/,'')+'K views':Math.floor(watchCount).toLocaleString('en-IN')+' views'):'';subtext.textContent=[window.indTubeFormatChannelHandle(snippet.channelTitle||'IndTube Creator'),watchViews,snippet.publishedAt?indTubeTimeAgo(snippet.publishedAt):''].filter(Boolean).join(' • ');subtext.dataset.videoId=videoId;}
+  const channelName=document.getElementById('channelNameTag'); if(channelName) channelName.textContent=window.indTubeFormatChannelHandle(snippet.channelTitle||'YouTube Channel');
   const avatar=document.getElementById('channelAvatarBox');
   const openChannel=()=>{if(snippet.channelId)openCreatorChannelInIndTube(snippet.channelId,snippet.channelTitle||'Creator');};
   if(avatar){avatar.textContent=(snippet.channelTitle||'U').charAt(0);avatar.dataset.channelId=snippet.channelId||'';avatar.onclick=openChannel;}
@@ -2390,7 +2390,7 @@ async function loadRealVideoStats(videoId, channelId) {
       if (watchSubtext) {
         const publishedAt = currentVideoObj.snippet.publishedAt;
         const timeLabel = publishedAt ? indTubeTimeAgo(publishedAt) : '';
-        watchSubtext.textContent = [currentVideoObj.snippet.channelTitle || 'IndTube Creator', ownViews.toLocaleString('en-IN') + ' views', timeLabel].filter(Boolean).join(' • ');
+        watchSubtext.textContent = [window.indTubeFormatChannelHandle(currentVideoObj.snippet.channelTitle || 'IndTube Creator'), ownViews.toLocaleString('en-IN') + ' views', timeLabel].filter(Boolean).join(' • ');
       }
     } catch (statsError) {
       console.warn('IndTube views could not be read from Supabase:', statsError);
@@ -2411,6 +2411,11 @@ async function loadRealVideoStats(videoId, channelId) {
     if (subsEl) subsEl.textContent = 'लोड हो रहे हैं…';
     // Start subscriber loading immediately; do not make it wait for the view-count query.
     refreshIndTubeSubscriberCount(channelId);
+    // The public-stat loader can finish after the first reaction refresh; repaint
+    // from the authoritative shared counter so it cannot leave a stale zero.
+    if (typeof window.indtubeRefreshLongReactions === 'function') {
+      window.indtubeRefreshLongReactions(videoId);
+    }
     return;
   }
 
@@ -2439,6 +2444,9 @@ async function loadRealVideoStats(videoId, channelId) {
     if (likes != null) {
       videoBaseLikeCount = likes;
       updateDisplayedLikeCount();
+      if (typeof window.indtubeRefreshLongReactions === 'function') {
+        window.indtubeRefreshLongReactions(videoId);
+      }
     } else if (like) like.textContent = 'Hidden';
     const commentTag = document.getElementById('commentCountTag');
     const commentTotal = document.getElementById('commentTotal');
@@ -3119,7 +3127,7 @@ function playLocalVideo(video) {
   document.getElementById('watchVideoTitle').setAttribute('aria-expanded','false');
   document.getElementById('videoDescriptionPanel').hidden = true;
   document.getElementById('videoDescriptionText').textContent = video.description || 'इस वीडियो के लिए description नहीं जोड़ा गया है।';
-  document.getElementById('watchVideoSubtext').textContent = 'IndTube • Your uploaded video';
+  document.getElementById('watchVideoSubtext').textContent = '@IndTube • Your uploaded video';
   // Local files do not have YouTube public counters; never leave the previous video's stats visible.
   const localViews = document.getElementById('watchViewsCount');
   const localLikes = document.getElementById('watchLikesCount');
@@ -4374,6 +4382,7 @@ function showCurrentShort() {
     creatorRow.insertBefore(avatar, creatorEl);
   }
   avatar.textContent = creatorName.slice(0,1).toUpperCase();
+  if (item.__indtubeSupabase && creatorId) { avatar.dataset.userId = creatorId; window.indTubeLoadPublicAvatar?.(avatar, creatorId); } else { delete avatar.dataset.userId; }
   avatar.onclick = () => { if (creatorId) openCreatorChannelInIndTube(creatorId, creatorName); };
   if (creatorId && API_KEY) {
     fetch(`${BASE_URL}/channels?part=snippet&id=${encodeURIComponent(creatorId)}&key=${encodeURIComponent(API_KEY)}`)
@@ -5466,7 +5475,7 @@ document.addEventListener('DOMContentLoaded',()=>{const d=channelData();if(d.nam
   function makeLongCard(row){
     const card=document.createElement('article');
     card.className='video-card indtube-uploaded-video-card';
-    card.dataset.indtubeSupabaseId=String(row.id);
+    card.dataset.indtubeSupabaseId=String(row.id); card.dataset.userId=String(row.user_id||'');
     const thumb=document.createElement('div'); thumb.className='thumbnail-box';
     if(row.thumbnail_url){ const img=document.createElement('img'); img.src=row.thumbnail_url; img.alt=row.title||'IndTube video'; img.loading='lazy'; thumb.appendChild(img); }
     else { thumb.style.cssText='display:flex;align-items:center;justify-content:center;background:#202020;color:#fff;font-size:42px;'; thumb.textContent='▶'; }
@@ -5549,9 +5558,9 @@ document.addEventListener('DOMContentLoaded',()=>{const d=channelData();if(d.nam
         const age = snippet.publishedAt && typeof indTubeTimeAgo==='function' ? indTubeTimeAgo(snippet.publishedAt) : '';
         const rawViews = snippet.viewCount ?? snippet.views_count ?? snippet.view_count ?? snippet.views ?? 0;
         const views = formatIndTubeViews(rawViews);
-        sub.textContent = `${snippet.channelTitle || 'IndTube Creator'} • ${views}${age ? ' • ' + age : ''}`;
+        sub.textContent = `${window.indTubeFormatChannelHandle(snippet.channelTitle || 'IndTube Creator')} • ${views}${age ? ' • ' + age : ''}`;
       }
-      const channel=document.getElementById('channelNameTag'); if(channel) channel.textContent=snippet.channelTitle||'IndTube Creator';
+      const channel=document.getElementById('channelNameTag'); if(channel) channel.textContent=window.indTubeFormatChannelHandle(snippet.channelTitle||'IndTube Creator');
       const shelf=document.getElementById('shortsShelfSection'); if(shelf) shelf.style.display='';
       window.loadHorizontalShortsShelf(snippet.title||'');
       window.fetchRelatedVideos(snippet.title||'');
@@ -5783,6 +5792,27 @@ document.addEventListener('DOMContentLoaded',()=>{const d=channelData();if(d.nam
   const TABLE='video_reactions';
   const db=()=>window.indSupabase||(typeof indSupabase!=='undefined'?indSupabase:null);
   const shortState=new Map(), shortCounts=new Map(), longState=new Map(), longCounts=new Map();
+  const longWriteQueue=new Map(), shortWriteQueue=new Map();
+  const longTapSeq=new Map(), shortTapSeq=new Map();
+  function syncLocalReaction(videoId,reaction,isShort){
+    try {
+      if(isShort){
+        const all=JSON.parse(localStorage.getItem('indtube_shorts_reactions')||'{}');
+        const likes=JSON.parse(localStorage.getItem('indtube_shorts_likes')||'{}');
+        if(reaction) all[videoId]=reaction; else delete all[videoId];
+        if(reaction==='like') likes[videoId]=true; else delete likes[videoId];
+        localStorage.setItem('indtube_shorts_reactions',JSON.stringify(all));
+        localStorage.setItem('indtube_shorts_likes',JSON.stringify(likes));
+      }else{
+        const likes=JSON.parse(localStorage.getItem('indtube_liked_video_ids')||'[]').filter(x=>String(x)!==String(videoId));
+        const dislikes=JSON.parse(localStorage.getItem('indtube_disliked_video_ids')||'[]').filter(x=>String(x)!==String(videoId));
+        if(reaction==='like') likes.push(videoId);
+        if(reaction==='dislike') dislikes.push(videoId);
+        localStorage.setItem('indtube_liked_video_ids',JSON.stringify([...new Set(likes)]));
+        localStorage.setItem('indtube_disliked_video_ids',JSON.stringify([...new Set(dislikes)]));
+      }
+    } catch(e) { console.warn('IndTube local reaction sync:',e); }
+  }
   function visitorId(){
     const key='indtube_public_visitor_id';
     try{
@@ -5793,10 +5823,13 @@ document.addEventListener('DOMContentLoaded',()=>{const d=channelData();if(d.nam
   }
   async function actor(){
     const client=db();if(!client)throw new Error('Supabase connection nahi mila.');
-    const {data,error}=await client.auth.getUser();
-    if(error && !/session|auth session missing/i.test(error.message||'')) throw error;
-    const user=data?.user;
-    return user?.id?{user_id:user.id,visitor_id:null,key:'u:'+user.id}:{user_id:null,visitor_id:visitorId(),key:'v:'+visitorId()};
+    // getSession reads the locally cached auth session; getUser may wait for a
+    // network validation before a reaction can even be written.
+    const {data,error}=await client.auth.getSession();
+    if(error)throw error;
+    const user=data?.session?.user;
+    const guest=visitorId();
+    return user?.id?{user_id:user.id,visitor_id:null,key:'u:'+user.id}:{user_id:null,visitor_id:guest,key:'v:'+guest};
   }
   function actorQuery(query,a){return a.user_id?query.eq('user_id',a.user_id).is('visitor_id',null):query.is('user_id',null).eq('visitor_id',a.visitor_id);}
   async function readReaction(videoId){
@@ -5809,8 +5842,20 @@ document.addEventListener('DOMContentLoaded',()=>{const d=channelData();if(d.nam
       if(reaction){const {error}=await client.from(TABLE).upsert({video_id:String(videoId),user_id:a.user_id,visitor_id:null,reaction},{onConflict:'user_id,video_id'});if(error)throw error;}
       else {let q=client.from(TABLE).delete().eq('video_id',String(videoId)).eq('user_id',a.user_id);const {error}=await q;if(error)throw error;}
     }else{
-      let q=client.from(TABLE).delete().eq('video_id',String(videoId)).is('user_id',null).eq('visitor_id',a.visitor_id);const {error:delError}=await q;if(delError)throw delError;
-      if(reaction){const {error}=await client.from(TABLE).insert({video_id:String(videoId),user_id:null,visitor_id:a.visitor_id,reaction});if(error)throw error;}
+      // Use a stable unique key for guests. Delete+insert could fail under RLS
+      // or leave a gap; upsert updates the same visitor/video reaction safely.
+      if(reaction){
+        const {error}=await client.from(TABLE).upsert(
+          {video_id:String(videoId),user_id:null,visitor_id:a.visitor_id,reaction},
+          {onConflict:'visitor_id,video_id'}
+        );
+        if(error)throw error;
+      }else{
+        const {error}=await client.from(TABLE).delete()
+          .eq('video_id',String(videoId)).is('user_id',null)
+          .eq('visitor_id',a.visitor_id);
+        if(error)throw error;
+      }
     }
   }
   async function reactionCounts(videoId){
@@ -5823,31 +5868,62 @@ document.addEventListener('DOMContentLoaded',()=>{const d=channelData();if(d.nam
   }
   function paintLong(reaction,counts){
     isLiked=reaction==='like';isDisliked=reaction==='dislike';
+    if(currentVideoObj?.id) syncLocalReaction(String(currentVideoObj.id),reaction,false);
     document.getElementById('likeBtn')?.classList.toggle('liked',isLiked);
     document.getElementById('dislikeBtn')?.classList.toggle('active',isDisliked);
     const l=document.getElementById('likeCount'),d=document.getElementById('dislikeCount');
-    if(l)l.textContent=typeof formatCompactCount==='function'?formatCompactCount(counts.likes):String(counts.likes);
+    const publicBase=currentVideoObj?.snippet?.__indtubeSupabase?0:(Number(videoBaseLikeCount)||0);
+    const visibleLikes=Math.max(0,Number(counts.likes)||0)+publicBase;
+    if(l)l.textContent=typeof formatCompactCount==='function'?formatCompactCount(visibleLikes):String(visibleLikes);
     if(d)d.textContent=typeof formatCompactCount==='function'?formatCompactCount(counts.dislikes):String(counts.dislikes);
   }
   async function refreshLong(videoId){
     try{const [{reaction},counts]=await Promise.all([readReaction(videoId),reactionCounts(videoId)]);if(String(currentVideoObj?.id)!==String(videoId))return;longState.set(String(videoId),reaction);longCounts.set(String(videoId),counts);paintLong(reaction,counts);}
-    catch(e){console.warn('IndTube global Long reactions:',e);}
+    catch(e){
+      console.warn('IndTube global Long reactions:',e);
+      const l=document.getElementById('likeCount'),d=document.getElementById('dislikeCount');
+      if(l && (!l.textContent || l.textContent==='0')) l.title='Like count load failed: '+(e.message||'Supabase error');
+      if(d && (!d.textContent || d.textContent==='0')) d.title='Dislike count load failed: '+(e.message||'Supabase error');
+    }
   }
   async function toggleLong(kind){
-    if(!currentVideoObj?.id)return;const id=String(currentVideoObj.id),btn=document.getElementById(kind==='like'?'likeBtn':'dislikeBtn');if(btn?.dataset.reactionBusy==='1')return;
-    if(btn){btn.dataset.reactionBusy='1';btn.disabled=true;}
-    let old=longState.get(id)||'',previous=longCounts.get(id)||{likes:0,dislikes:0},optimistic=false;
-    try{
-      const {actor:a,reaction}=await readReaction(id);old=reaction;const next=old===kind?'':kind;
-      const counts={...previous};if(old==='like')counts.likes=Math.max(0,counts.likes-1);if(old==='dislike')counts.dislikes=Math.max(0,counts.dislikes-1);if(next==='like')counts.likes++;if(next==='dislike')counts.dislikes++;
-      longState.set(id,next);longCounts.set(id,counts);if(String(currentVideoObj?.id)===id){paintLong(next,counts);optimistic=true;}
-      await writeReaction(id,next,a);const fresh=await reactionCounts(id);longCounts.set(id,fresh);if(String(currentVideoObj?.id)===id)paintLong(next,fresh);
-    }catch(e){if(optimistic){longState.set(id,old);longCounts.set(id,previous);paintLong(old,previous);}alert('Like/Dislike save nahi hua: '+(e.message||'Supabase error'));}
-    finally{if(btn){btn.disabled=false;delete btn.dataset.reactionBusy;}}
+    if(!currentVideoObj?.id)return;
+    const id=String(currentVideoObj.id);
+    const localLikes=(()=>{try{return JSON.parse(localStorage.getItem('indtube_liked_video_ids')||'[]').map(String);}catch(_){return [];}})();
+    const localDislikes=(()=>{try{return JSON.parse(localStorage.getItem('indtube_disliked_video_ids')||'[]').map(String);}catch(_){return [];}})();
+    const old=longState.has(id)?(longState.get(id)||''):(localLikes.includes(id)?'like':(localDislikes.includes(id)?'dislike':''));
+    const next=old===kind?'':kind;
+    const counts={...(longCounts.get(id)||{likes:0,dislikes:0})};
+    if(old==='like')counts.likes=Math.max(0,counts.likes-1);
+    if(old==='dislike')counts.dislikes=Math.max(0,counts.dislikes-1);
+    if(next==='like')counts.likes++;
+    if(next==='dislike')counts.dislikes++;
+    longState.set(id,next);longCounts.set(id,counts);
+    // Paint synchronously in the tap handler. Never disable either button.
+    paintLong(next,counts);
+    const seq=(longTapSeq.get(id)||0)+1;longTapSeq.set(id,seq);
+    const previous=longWriteQueue.get(id)||Promise.resolve();
+    const task=previous.catch(()=>{}).then(async()=>{
+      const a=await actor();
+      await writeReaction(id,next,a);
+    });
+    longWriteQueue.set(id,task);
+    task.then(async()=>{
+      if(longTapSeq.get(id)===seq) await refreshLong(id);
+    }).catch(async e=>{
+      console.warn('IndTube Long reaction save failed:',e);
+      if(longTapSeq.get(id)===seq){
+        alert('Like/Dislike save nahi hua: '+(e.message||'Supabase error'));
+        await refreshLong(id);
+      }
+    }).finally(()=>{if(longWriteQueue.get(id)===task)longWriteQueue.delete(id);});
   }
   window.toggleLike=()=>toggleLong('like');window.toggleDislike=()=>toggleLong('dislike');
+  window.indtubeRefreshLongReactions=refreshLong;
   function currentShortId(){try{const item=typeof shortsList!=='undefined'?shortsList[shortsIndex]:null;return item?String(item.id||(typeof getVideoId==='function'?getVideoId(item):'')):'';}catch(_){return '';}}
   function paintShort(reaction,counts){
+    const activeId=currentShortId();
+    if(activeId) syncLocalReaction(activeId,reaction,true);
     const l=document.getElementById('shortLikeBtn'),d=document.getElementById('shortDislikeBtn');l?.classList.toggle('is-liked',reaction==='like');d?.classList.toggle('is-disliked',reaction==='dislike');
     const ls=l?.querySelector('span'),ds=d?.querySelector('span');if(ls)ls.textContent=counts.likes?String(counts.likes):'Like';if(ds)ds.textContent=counts.dislikes?String(counts.dislikes):'Dislike';
     if(typeof shortsLiked!=='undefined')shortsLiked=reaction==='like';
@@ -5856,15 +5932,35 @@ document.addEventListener('DOMContentLoaded',()=>{const d=channelData();if(d.nam
     try{const [{reaction},counts]=await Promise.all([readReaction(id),reactionCounts(id)]);if(currentShortId()!==String(id))return;shortState.set(String(id),reaction);shortCounts.set(String(id),counts);paintShort(reaction,counts);}
     catch(e){console.warn('IndTube global Shorts reactions:',e);}
   }
-  window.setShortReaction=async function(kind){
-    const id=currentShortId();if(!id)return;const btn=document.getElementById(kind==='like'?'shortLikeBtn':'shortDislikeBtn');if(btn?.dataset.reactionBusy==='1')return;if(btn){btn.dataset.reactionBusy='1';btn.disabled=true;}
-    let old=shortState.get(id)||'',previous=shortCounts.get(id)||{likes:0,dislikes:0},optimistic=false;
-    try{
-      const {actor:a,reaction}=await readReaction(id);old=reaction;const next=old===kind?'':kind;const counts={...previous};if(old==='like')counts.likes=Math.max(0,counts.likes-1);if(old==='dislike')counts.dislikes=Math.max(0,counts.dislikes-1);if(next==='like')counts.likes++;if(next==='dislike')counts.dislikes++;
-      shortState.set(id,next);shortCounts.set(id,counts);if(currentShortId()===id){paintShort(next,counts);optimistic=true;}
-      await writeReaction(id,next,a);const fresh=await reactionCounts(id);shortCounts.set(id,fresh);if(currentShortId()===id)paintShort(next,fresh);
-    }catch(e){if(optimistic){shortState.set(id,old);shortCounts.set(id,previous);paintShort(old,previous);}alert('Like/Dislike save nahi hua: '+(e.message||'Supabase error'));}
-    finally{if(btn){btn.disabled=false;delete btn.dataset.reactionBusy;}}
+  window.setShortReaction=function(kind){
+    const id=currentShortId();if(!id)return;
+    const localAll=(()=>{try{return JSON.parse(localStorage.getItem('indtube_shorts_reactions')||'{}');}catch(_){return {};}})();
+    const legacyLikes=(()=>{try{return JSON.parse(localStorage.getItem('indtube_shorts_likes')||'{}');}catch(_){return {};}})();
+    const old=shortState.has(id)?(shortState.get(id)||''):(localAll[id]||(legacyLikes[id]?'like':''));
+    const next=old===kind?'':kind;
+    const counts={...(shortCounts.get(id)||{likes:0,dislikes:0})};
+    if(old==='like')counts.likes=Math.max(0,counts.likes-1);
+    if(old==='dislike')counts.dislikes=Math.max(0,counts.dislikes-1);
+    if(next==='like')counts.likes++;
+    if(next==='dislike')counts.dislikes++;
+    shortState.set(id,next);shortCounts.set(id,counts);
+    if(currentShortId()===id)paintShort(next,counts);
+    const seq=(shortTapSeq.get(id)||0)+1;shortTapSeq.set(id,seq);
+    const previous=shortWriteQueue.get(id)||Promise.resolve();
+    const task=previous.catch(()=>{}).then(async()=>{
+      const a=await actor();
+      await writeReaction(id,next,a);
+    });
+    shortWriteQueue.set(id,task);
+    task.then(async()=>{
+      if(shortTapSeq.get(id)===seq) await refreshShort(id);
+    }).catch(async e=>{
+      console.warn('IndTube Shorts reaction save failed:',e);
+      if(shortTapSeq.get(id)===seq){
+        alert('Like/Dislike save nahi hua: '+(e.message||'Supabase error'));
+        await refreshShort(id);
+      }
+    }).finally(()=>{if(shortWriteQueue.get(id)===task)shortWriteQueue.delete(id);});
   };
   window.likeShort=()=>window.setShortReaction('like');window.dislikeShort=()=>window.setShortReaction('dislike');
   function bindOpenWatch(){const original=window.openWatchScreen;if(typeof original!=='function'||original.__indtubeGlobalReaction)return;const wrapped=function(id){const result=original.apply(this,arguments);setTimeout(()=>refreshLong(id),100);return result;};wrapped.__indtubeGlobalReaction=true;window.openWatchScreen=wrapped;}
@@ -5884,14 +5980,44 @@ document.addEventListener('DOMContentLoaded',()=>{const d=channelData();if(d.nam
 <script id="indtube-final-public-creator-name-fix">
 (function(){
   'use strict';
-  function label(row){const raw=String(row?.channel_name||row?.creator_name||'').trim();return raw?(raw.startsWith('@')?raw:'@'+raw):'IndTube Creator';}
+  // Format handles once, before the metadata is rendered, so @IndTube never flashes.
+  window.indTubeFormatChannelHandle = function(value){
+    const raw=String(value||'IndTube Creator').trim();
+    if(/^@?indtube$/i.test(raw)) return '@IndTube';
+    return raw ? (raw.startsWith('@') ? raw : '@'+raw) : '@IndTube';
+  };
+  function label(row){return window.indTubeFormatChannelHandle(row?.channel_name||row?.creator_name||'IndTube');}
   function sync(){if(typeof indTubeSyncOwnCreatorName==='function')indTubeSyncOwnCreatorName();}
   function patchCurrent(){
     try{
       const item=typeof shortsList!=='undefined'?shortsList[shortsIndex]:null;
       if(item){const name=label(item);if(item.snippet)item.snippet.channelTitle=name;const el=document.getElementById('shortsCreatorName');if(el){el.textContent=name;el.style.cursor=item.user_id?'pointer':'default';el.onclick=item.user_id?()=>window.openCreatorChannelInIndTube?.(item.user_id,name):null;}const avatar=document.getElementById('shortsCreatorAvatar');if(avatar&&!avatar.querySelector('img'))avatar.textContent=name.replace(/^@/,'').slice(0,1).toUpperCase()||'I';}
       const video=typeof currentVideoObj!=='undefined'?currentVideoObj:null;
-      if(video?.snippet?.__indtubeSupabase){const name=label({channel_name:video.snippet.channelTitle});const tag=document.getElementById('channelNameTag');if(tag)tag.textContent=name;const sub=document.getElementById('watchVideoSubtext');if(sub){const parts=sub.textContent.split(' • ');if(parts[0]!==name){parts[0]=name;sub.textContent=parts.join(' • ');}}}
+      if(video?.snippet?.__indtubeSupabase){
+        const name=label({channel_name:video.snippet.channelTitle});
+        const tag=document.getElementById('channelNameTag');
+        if(tag && tag.textContent!==name) tag.textContent=name;
+        const sub=document.getElementById('watchVideoSubtext');
+        if(sub){
+          // Never rewrite the whole metadata line here: view tracking updates
+          // its own views span. Replacing textContent caused the @ handle to flicker.
+          let channelNode=sub.querySelector('[data-indtube-channel-label]');
+          if(channelNode){
+            if(channelNode.textContent!==name) channelNode.textContent=name;
+          } else {
+            const firstText=Array.from(sub.childNodes).find(n=>n.nodeType===Node.TEXT_NODE && n.textContent.trim());
+            if(firstText){
+              const current=firstText.textContent.trim();
+              if(current!==name && !current.includes(' • ')) firstText.textContent=name;
+            } else if(!sub.textContent.trim()) {
+              channelNode=document.createElement('span');
+              channelNode.dataset.indtubeChannelLabel='1';
+              channelNode.textContent=name;
+              sub.prepend(channelNode);
+            }
+          }
+        }
+      }
     }catch(_){ }
   }
   document.addEventListener('DOMContentLoaded',()=>{sync();setTimeout(sync,1500);setTimeout(sync,5000);});
@@ -6616,9 +6742,33 @@ html[data-short-direction="down"] .shorts-comment-footer.indtube-short-ui-enter 
       if (viewsEl) viewsEl.textContent = Math.max(0, Number(count) || 0).toLocaleString('en-IN');
       const sub = byId('watchVideoSubtext');
       if (sub) {
-        const age = snippet.publishedAt && typeof indTubeTimeAgo === 'function'
-          ? indTubeTimeAgo(snippet.publishedAt) : '';
-        sub.textContent = (snippet.channelTitle || 'IndTube Creator') + ' • ' + formatViews(count) + (age ? ' • ' + age : '');
+        // Keep the creator handle in its own stable node. Only the views node
+        // changes after a count update, so the leading @ never disappears/flickers.
+        let channelNode = sub.querySelector('[data-indtube-channel-label]');
+        let viewsNode = sub.querySelector('[data-indtube-views-label]');
+        let ageNode = sub.querySelector('[data-indtube-age-label]');
+        if (!channelNode || !viewsNode) {
+          const channelLabel = window.indTubeFormatChannelHandle(snippet.channelTitle || 'IndTube Creator');
+          const ageLabel = snippet.publishedAt && typeof indTubeTimeAgo === 'function'
+            ? indTubeTimeAgo(snippet.publishedAt) : '';
+          sub.replaceChildren();
+          channelNode = document.createElement('span');
+          channelNode.dataset.indtubeChannelLabel = '1';
+          channelNode.textContent = channelLabel;
+          const sep1 = document.createTextNode(' • ');
+          viewsNode = document.createElement('span');
+          viewsNode.dataset.indtubeViewsLabel = '1';
+          viewsNode.textContent = formatViews(count);
+          sub.append(channelNode, sep1, viewsNode);
+          if (ageLabel) {
+            ageNode = document.createElement('span');
+            ageNode.dataset.indtubeAgeLabel = '1';
+            ageNode.textContent = ' • ' + ageLabel;
+            sub.append(ageNode);
+          }
+        } else {
+          viewsNode.textContent = formatViews(count);
+        }
       }
     }
   }
@@ -6630,7 +6780,7 @@ html[data-short-direction="down"] .shorts-comment-footer.indtube-short-ui-enter 
     try {
       const client = db();
       if (!client) throw new Error('Supabase client unavailable');
-      const { data: rpcData, error } = await client.rpc('indtube_increment_video_view', {
+      const { data: rpcData, error } = await client.rpc('indtube_increment_video_view_v2', {
         p_video_id: id,
         p_viewer_key: viewerKey(),
         p_event_id: eventId
@@ -6652,8 +6802,11 @@ html[data-short-direction="down"] .shorts-comment-footer.indtube-short-ui-enter 
       if (!readError && row && row.views_count !== null && row.views_count !== undefined) {
         count = Number(row.views_count);
       }
+      // If RPC succeeded but SELECT is blocked by RLS, keep the successful RPC.
+      // The database counter has already been incremented.
       if (!Number.isFinite(count) || count < 0) {
-        throw readError || new Error('View counter returned no usable count');
+        if (readError) return true;
+        throw new Error('View counter returned no usable count');
       }
       updateViewLabels(id, count);
       const statusEl = document.getElementById('watchVideoSubtext');
@@ -6706,7 +6859,7 @@ html[data-short-direction="down"] .shorts-comment-footer.indtube-short-ui-enter 
   }
 
   function attachViewTracking(video) {
-    if (!(video instanceof HTMLVideoElement) || !eligiblePlayer(video) || video.dataset.indtubeViewHooked === '1') return;
+    if (!(video instanceof HTMLVideoElement) || video.dataset.indtubeViewHooked === '1') return;
     video.dataset.indtubeViewHooked = '1';
 
     let playbackEventId = null;
@@ -6746,6 +6899,9 @@ html[data-short-direction="down"] .shorts-comment-footer.indtube-short-ui-enter 
     };
 
     const startPlayback = () => {
+      // The player can be created before it is inserted into the main player.
+      // Only begin real-view tracking once it is actually an IndTube player.
+      if (!eligiblePlayer(video)) return;
       // Each distinct play after pause/replay gets its own event UUID.
       if (!video.paused && !video.ended && !playbackEventId) {
         playbackEventId = newViewEventId();
@@ -6797,6 +6953,14 @@ html[data-short-direction="down"] .shorts-comment-footer.indtube-short-ui-enter 
     }
 
     video.addEventListener('play', startPlayback);
+    // If autoplay starts before the player is attached to #mainPlayerContainer,
+    // retry shortly after insertion so the 3-second counter is not lost.
+    video.addEventListener('playing', () => {
+      if (!eligiblePlayer(video)) {
+        setTimeout(() => { if (!video.paused && !video.ended) startPlayback(); }, 150);
+        return;
+      }
+    }, { passive: true });
     video.addEventListener('playing', () => {
       startPlayback();
       lastMediaTime = Number.isFinite(video.currentTime) ? video.currentTime : lastMediaTime;
@@ -7766,6 +7930,9 @@ html[data-short-direction="down"] .shorts-comment-footer.indtube-short-ui-enter 
     return {all,c};
   }
   function paintOne(id,buttonId,key){
+    // Like/Dislike are authoritative in Supabase video_reactions. Never let this
+    // separate local action-counter overwrite their shared totals or labels.
+    if(buttonId==='shortLikeBtn' || buttonId==='shortDislikeBtn') return;
     const button=document.getElementById(buttonId);
     if(!button) return;
     let span=button.querySelector('span');
@@ -7889,3 +8056,94 @@ html[data-short-direction="down"] .shorts-comment-footer.indtube-short-ui-enter 
 </style>
 
 
+
+<script id="indtube-public-profile-photo-sync">
+/* IndTube public profile-photo sync: shared Supabase Storage URL + public profile row. */
+(function(){
+  'use strict';
+  const cache = new Map();
+  const client = () => window.indSupabase || (typeof indSupabase !== 'undefined' ? indSupabase : null);
+  const esc = s => String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  async function getPhotos(ids){
+    const db=client(); const unique=[...new Set((ids||[]).filter(Boolean).map(String))];
+    const missing=unique.filter(id=>!cache.has(id));
+    if(missing.length && db){
+      try{
+        const {data,error}=await db.from('indtube_profiles').select('id,avatar_url').in('id',missing);
+        if(error) throw error;
+        (data||[]).forEach(row=>cache.set(String(row.id),row.avatar_url||''));
+        missing.forEach(id=>{if(!cache.has(id))cache.set(id,'')});
+      }catch(e){ console.warn('IndTube public profile photos could not load:',e.message||e); }
+    }
+    return cache;
+  }
+  async function paintAvatar(el,id){
+    if(!el||!id)return;
+    const map=await getPhotos([id]); const url=map.get(String(id));
+    if(!url||!el.isConnected)return;
+    el.textContent=''; el.style.overflow='hidden';
+    const img=document.createElement('img'); img.src=url; img.alt='Creator profile'; img.loading='lazy'; img.style.cssText='width:100%;height:100%;object-fit:cover;border-radius:inherit;display:block';
+    el.replaceChildren(img);
+  }
+  window.indTubeLoadPublicAvatar=paintAvatar;
+  window.indTubeLoadPublicAvatars=async function(ids){await getPhotos(ids)};
+  window.indTubeRefreshPublicAvatar=async function(id){cache.delete(String(id));await paintAvatar(document.getElementById('userAvatar'),id);await paintAvatar(document.getElementById('channelAvatar'),id);await paintAvatar(document.getElementById('editChannelAvatar'),id)};
+  document.addEventListener('DOMContentLoaded',()=>{
+    const run=()=>{document.querySelectorAll('.indtube-uploaded-video-card[data-user-id]').forEach(card=>{const av=card.querySelector('.channel-avatar');if(av)paintAvatar(av,card.dataset.userId)});};
+    run();setTimeout(run,700);setTimeout(run,1800);
+  });
+
+  // The original card renderer is preserved; attach the owner ID and paint its avatar.
+  const oldFetch=window.fetchYouTubeVideos;
+  // Supabase-uploaded long cards are built in a later renderer; observe their owner IDs.
+  const observer=new MutationObserver(records=>{
+    for(const rec of records) for(const node of rec.addedNodes){
+      if(!(node instanceof Element))continue;
+      const cards=[];
+      if(node.matches('.indtube-uploaded-video-card[data-user-id]'))cards.push(node);
+      node.querySelectorAll?.('.indtube-uploaded-video-card[data-user-id]').forEach(x=>cards.push(x));
+      cards.forEach(card=>{const id=card.dataset.userId;const av=card.querySelector('.channel-avatar');if(id&&av)paintAvatar(av,id)});
+    }
+  });
+  if(document.documentElement)observer.observe(document.documentElement,{childList:true,subtree:true});
+
+  // Replace local-only profile picker with a public upload. Keep a local URL fallback
+  // only after the shared upload has succeeded, so other viewers get the same image.
+  window.handleAvatarPicked=async function(e){
+    const file=e.target.files?.[0]; if(!file)return;
+    if(!file.type.startsWith('image/')){alert('Image select karein.');e.target.value='';return;}
+    if(file.size>2*1024*1024){alert('Logo 2 MB se chhota hona chahiye.');e.target.value='';return;}
+    const db=client();
+    if(!db){alert('Supabase connection nahi mil raha.');e.target.value='';return;}
+    try{
+      const {data:{user},error:authError}=await db.auth.getUser();
+      if(authError)throw authError; if(!user?.id)throw new Error('Pehle Gmail se login karein.');
+      const ext=(file.name.split('.').pop()||'jpg').toLowerCase().replace(/[^a-z0-9]/g,'')||'jpg';
+      const path=user.id+'/profile-avatar-'+Date.now()+'-'+Math.random().toString(36).slice(2,8)+'.'+ext;
+      const {error:uploadError}=await db.storage.from('videos').upload(path,file,{upsert:false,cacheControl:'3600',contentType:file.type});
+      if(uploadError)throw uploadError;
+      const url=db.storage.from('videos').getPublicUrl(path).data.publicUrl+'?v='+Date.now();
+      const {error:rowError}=await db.from('indtube_profiles').upsert({id:user.id,avatar_url:url,updated_at:new Date().toISOString()},{onConflict:'id'});
+      if(rowError)throw rowError;
+      try{await db.auth.updateUser({data:{avatar_url:url,picture:url}})}catch(metaErr){console.warn('Profile metadata sync:',metaErr)}
+      cache.set(user.id,url);
+      localStorage.setItem('indtube_profile_logo',url);
+      window.renderProfileLogo?.(); window.renderChannelAvatar?.();
+      // Update every visible avatar belonging to this account immediately.
+      ['userAvatar','channelAvatar','editChannelAvatar','channelAvatarBox','shortsCreatorAvatar'].forEach(id=>{const el=document.getElementById(id);if(el){el.textContent='';const img=document.createElement('img');img.src=url;img.alt='Profile photo';img.style.cssText='width:100%;height:100%;object-fit:cover;border-radius:inherit;display:block';el.replaceChildren(img)}});
+      document.querySelectorAll('[data-user-id="'+CSS.escape(user.id)+'"] .channel-avatar').forEach(el=>paintAvatar(el,user.id));
+      const shortId=window.currentVideoObj?.user_id||window.currentVideoObj?.snippet?.channelId;
+      if(shortId===user.id){const a=document.getElementById('shortsCreatorAvatar');if(a)paintAvatar(a,user.id)}
+      alert('Profile photo sabhi users ke liye update ho gayi!');
+    }catch(err){console.error('IndTube profile photo upload failed:',err);alert('Photo public nahi ho payi: '+(err.message||'Supabase error')+'\nSQL setup aur Storage policy check karein.');}
+    finally{e.target.value='';}
+  };
+
+  // Resolve IndTube creator photos in Shorts, overriding the YouTube thumbnail fallback.
+  const oldShow=window.showCurrentShort;
+  if(typeof oldShow==='function'){
+    window.showCurrentShort=function(){const out=oldShow.apply(this,arguments);try{const item=window.shortsList?.[window.shortsIndex];const id=item?.user_id||item?.snippet?.channelId;if(id&&item?.__indtubeSupabase){const a=document.getElementById('shortsCreatorAvatar');if(a)paintAvatar(a,id)}}catch(_){}return out;};
+  }
+})();
+
+</script>

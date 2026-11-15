@@ -1142,6 +1142,14 @@ function indTubeIsSafeVideoItem(item) {
 @media(max-width:600px){#indtubeShortsPlayPause{width:62px;height:62px}}
 </style>
 
+
+<style id="indtube-owner-delete-video-style">
+.indtube-owner-video-actions{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:6px;flex-shrink:0}
+.indtube-owner-video-actions .action-pill{padding:8px 10px;font-size:12px}
+.indtube-owner-video-actions .action-pill:disabled{opacity:.55;cursor:wait}
+@media(max-width:420px){.indtube-owner-video-actions{gap:4px}.indtube-owner-video-actions .action-pill{padding:7px 8px;font-size:11px}}
+</style>
+
 </head>
 <body>
 
@@ -2816,14 +2824,85 @@ function closeMyVideosPage(){document.getElementById('myVideosPage').style.displ
 function handleAvatarPicked(e){const file=e.target.files?.[0];if(!file)return;if(!file.type.startsWith('image/')){alert('Image select karein.');return;}if(file.size>2*1024*1024){alert('Logo 2 MB se chhota hona chahiye.');return;}const r=new FileReader();r.onload=()=>{try{localStorage.setItem('indtube_profile_logo',r.result);renderProfileLogo();}catch(_){alert('Image save nahi ho payi. Chhoti image try karein.');}};r.readAsDataURL(file);e.target.value='';}
 function renderProfileLogo(){const a=document.getElementById('userAvatar');if(!a)return;const saved=localStorage.getItem('indtube_profile_logo');if(saved)a.innerHTML='<img alt="Profile logo" src="'+saved+'">';}
 document.addEventListener('DOMContentLoaded',renderProfileLogo);
+async function indTubeDeleteOwnSupabaseVideo(videoId, expectedOwnerId, videoUrl, thumbnailUrl, button) {
+  const client = window.indSupabase || indSupabase;
+  if (!client) { alert('Supabase connection nahi mil raha.'); return; }
+
+  // Always verify the authenticated Supabase identity; never trust UI/localStorage.
+  const { data: { user }, error: authError } = await client.auth.getUser();
+  if (authError) throw authError;
+  if (!user?.id || user.id !== String(expectedOwnerId)) {
+    alert('Sirf channel owner apna video delete kar sakta hai.');
+    return;
+  }
+  if (!confirm('Kya aap is video ko Supabase se permanently delete karna chahte hain? Video aur thumbnail dono delete honge.')) return;
+
+  if (button) { button.disabled = true; button.textContent = 'Deleting…'; }
+
+  // Remove only objects inside this owner's folder in the videos bucket.
+  const extractOwnedStoragePath = (rawUrl) => {
+    if (!rawUrl) return '';
+    try {
+      const pathname = new URL(rawUrl, location.href).pathname;
+      const match = pathname.match(/\/storage\/v1\/object\/(?:public|sign|authenticated)\/videos\/(.+)$/i);
+      if (!match) return '';
+      const path = decodeURIComponent(match[1].split('?')[0]);
+      return path.startsWith(user.id + '/') ? path : '';
+    } catch (_) { return ''; }
+  };
+
+  try {
+    const { data: deletedRows, error: deleteError } = await client
+      .from('videos')
+      .delete()
+      .eq('id', String(videoId))
+      .eq('user_id', user.id)
+      .select('id');
+    if (deleteError) throw deleteError;
+    if (!deletedRows || deletedRows.length !== 1) {
+      throw new Error('Video delete nahi hua. Owner permission / Supabase RLS policy check karein.');
+    }
+
+    const paths = [...new Set([
+      extractOwnedStoragePath(videoUrl),
+      extractOwnedStoragePath(thumbnailUrl)
+    ].filter(Boolean))];
+
+    let storageWarning = '';
+    if (paths.length) {
+      const { error: storageError } = await client.storage.from('videos').remove(paths);
+      if (storageError) storageWarning = storageError.message || 'Storage files delete nahi ho payin';
+    }
+
+    alert(storageWarning
+      ? 'Video database se delete ho gaya, lekin Storage file delete nahi hui: ' + storageWarning
+      : 'Video aur uski thumbnail Supabase se delete ho gaye.');
+    await renderMyUploads();
+    // Refresh the public feed so the deleted upload is no longer shown.
+    if (typeof loadVideos === 'function') {
+      try { await loadVideos(true); } catch (_) {}
+    }
+  } catch (err) {
+    if (button) { button.disabled = false; button.textContent = '🗑️ Delete'; }
+    alert('Delete nahi ho paya: ' + (err.message || err));
+  }
+}
+
 async function renderMyUploads() {
   const box = document.getElementById('myUploadsList'); if (!box) return;
+  box.innerHTML = '<p style="color:var(--text-secondary)">Aapke videos load ho rahe hain…</p>';
   try {
-    const { data: { session } } = await indSupabase.auth.getSession();
-    const { data: remoteVideos, error } = await indSupabase
-      .from('videos').select('id,title,description,video_url,video_type,created_at')
+    const client = window.indSupabase || indSupabase;
+    const { data: { user }, error: authError } = await client.auth.getUser();
+    if (authError) throw authError;
+    if (!user?.id) {
+      box.innerHTML = '<p style="color:var(--text-secondary)">Apne videos dekhne aur delete karne ke liye sign in karein.</p>';
+      return;
+    }
+    const { data: remoteVideos, error } = await client
+      .from('videos').select('id,user_id,title,description,video_url,thumbnail_url,video_type,created_at')
       .eq('status', 'published')
-      .eq('user_id', session?.user?.id || '00000000-0000-0000-0000-000000000000')
+      .eq('user_id', user.id)
       .order('created_at', { ascending: false }).limit(100);
     if (error) throw error;
     const localVideos = await getLocalVideos().catch(() => []);
@@ -2834,18 +2913,27 @@ async function renderMyUploads() {
     }
     if (remoteVideos && remoteVideos.length) {
       remoteVideos.forEach(v => {
+        // A delete control is rendered only for a row owned by the signed-in account.
+        const isOwner = String(v.user_id) === String(user.id);
         const card = document.createElement('div'); card.className = 'video-card';
         const date = v.created_at ? indTubeTimeAgo(v.created_at) : '';
-        card.innerHTML = `<div class="video-details"><div class="channel-avatar">▶</div><div class="meta-info"><h3></h3><p></p></div><button class="action-pill" type="button">▶ Play</button></div>`;
+        card.innerHTML = `<div class="video-details"><div class="channel-avatar">▶</div><div class="meta-info"><h3></h3><p></p></div><div class="indtube-owner-video-actions"><button class="action-pill indtube-play-own-video" type="button">▶ Play</button>${isOwner ? '<button class="action-pill indtube-delete-own-video" type="button" style="color:#ff7777;border-color:rgba(255,90,90,.45)">🗑️ Delete</button>' : ''}</div></div>`;
         card.querySelector('h3').textContent = v.title || 'Untitled video';
         card.querySelector('p').textContent = `${v.video_type || 'Video'} • IndTube • ${date}`;
-        card.querySelector('button').onclick = () => {
+        card.querySelector('.indtube-play-own-video').onclick = () => {
           const player = document.createElement('video');
           player.controls = true; player.playsInline = true; player.src = v.video_url;
           player.style.cssText = 'width:100%;max-height:65vh;background:#000;margin-top:10px;border-radius:10px;';
           const old = card.querySelector('video'); if (old) old.remove();
           card.appendChild(player); player.play().catch(() => {});
         };
+        const deleteButton = card.querySelector('.indtube-delete-own-video');
+        if (deleteButton && isOwner) {
+          deleteButton.onclick = ev => {
+            ev.stopPropagation();
+            indTubeDeleteOwnSupabaseVideo(v.id, v.user_id, v.video_url, v.thumbnail_url, deleteButton);
+          };
+        }
         box.appendChild(card);
       });
     }
@@ -6977,7 +7065,7 @@ html[data-short-direction="down"] .shorts-comment-footer.indtube-short-ui-enter 
 <script id="indtube-shorts-seekbar-script">
 (function(){
   'use strict';
-  let boundVideo=null, bar=null, fill=null, dragging=false;
+  let boundVideo=null, bar=null, fill=null, dragging=false, rafId=0;
 
   function getVideo(){
     return document.querySelector('#shortsViewer #shortsIframeContainer video.indtube-native-short, #shortsViewer #shortsIframeContainer video');
@@ -7004,8 +7092,24 @@ html[data-short-direction="down"] .shorts-comment-footer.indtube-short-ui-enter 
     if(!video || !ensureBar()) return;
     const d=Number(video.duration), t=Number(video.currentTime);
     const pct=Number.isFinite(d)&&d>0 ? Math.max(0,Math.min(100,t/d*100)) : 0;
-    if(fill) fill.style.width=pct+'%';
+    // Animate with compositor-friendly transform instead of waiting for the browser's
+    // comparatively slow timeupdate event (especially noticeable on Android).
+    if(fill) fill.style.transform='scaleX('+(pct/100)+')';
     bar.setAttribute('aria-valuenow',String(Math.round(pct)));
+  }
+  function animationTick(){
+    rafId=0;
+    const video=getVideo();
+    if(!video) return;
+    if(!dragging) update();
+    if(!video.paused && !video.ended) rafId=requestAnimationFrame(animationTick);
+  }
+  function startAnimation(){
+    if(!rafId) rafId=requestAnimationFrame(animationTick);
+  }
+  function stopAnimation(){
+    if(rafId){cancelAnimationFrame(rafId);rafId=0;}
+    update();
   }
   function seekAt(e){
     const video=getVideo();
@@ -7023,8 +7127,13 @@ html[data-short-direction="down"] .shorts-comment-footer.indtube-short-ui-enter 
       boundVideo=video;
       ['timeupdate','durationchange','loadedmetadata','canplay','seeked'].forEach(ev=>video.addEventListener(ev,update));
       video.addEventListener('emptied',update);
+      video.addEventListener('play',startAnimation);
+      video.addEventListener('playing',startAnimation);
+      video.addEventListener('pause',stopAnimation);
+      video.addEventListener('ended',stopAnimation);
     }
     update();
+    if(!video.paused && !video.ended) startAnimation();
   }
   function bindBar(){
     if(!ensureBar() || bar.dataset.seekBound==='1') return;
@@ -7095,5 +7204,29 @@ html[data-short-direction="down"] .shorts-comment-footer.indtube-short-ui-enter 
 }
 #shortsViewer .shorts-comment-footer .indtube-short-seekbar-track{
   height:2px!important; margin:0!important;
+}
+</style>
+
+
+<!-- IndTube Instagram-style seekbar thickness and border alignment fix -->
+<style id="indtube-shorts-seekbar-instagram-thick-blur-final">
+/* 4px soft progress line, sitting flush against the Add a comment border. */
+#shortsViewer .shorts-comment-footer{position:relative!important;}
+#shortsViewer .shorts-comment-footer .indtube-short-seekbar{
+  position:absolute!important;left:0!important;right:0!important;top:-2px!important;bottom:auto!important;
+  width:100%!important;height:8px!important;padding:2px 0!important;margin:0!important;
+  box-sizing:border-box!important;z-index:80!important;background:transparent!important;
+  touch-action:pan-x!important;
+}
+#shortsViewer .shorts-comment-footer .indtube-short-seekbar-track{
+  width:100%!important;height:4px!important;margin:0!important;
+  background:rgba(255,255,255,.30)!important;border-radius:8px!important;
+  overflow:hidden!important;filter:blur(.25px);
+}
+#shortsViewer .shorts-comment-footer .indtube-short-seekbar-fill{
+  display:block!important;width:100%!important;height:100%!important;
+  background:rgba(255,255,255,.86)!important;border-radius:8px!important;
+  filter:blur(.35px);transform:scaleX(0);transform-origin:left center!important;
+  will-change:transform;box-shadow:0 0 3px rgba(255,255,255,.24)!important;
 }
 </style>

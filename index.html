@@ -7237,40 +7237,48 @@ html[data-short-direction="down"] .shorts-comment-footer.indtube-short-ui-enter 
 </style>
 
 
-<style id="indtube-shorts-footer-and-seekbar-lift-final">
-/* Lift the Add a comment footer and its seek line together, leaving a small
-   bottom safe-area so Shorts content does not sit against the phone edge. */
-#shortsViewer {
-  box-sizing:border-box !important;
-  height:100vh !important;
-  height:100dvh !important;
-  padding:0 0 max(10px, env(safe-area-inset-bottom)) 0 !important;
-  margin:0 !important;
-  gap:0 !important;
-  overflow:hidden !important;
-}
-#shortsViewer .shorts-stage {
-  flex:1 1 0 !important;
-  min-height:0 !important;
-  margin:0 !important;
-  padding:0 !important;
-}
-#shortsViewer .shorts-comment-footer {
-  position:relative !important;
-  flex:0 0 76px !important;
-  height:76px !important;
-  min-height:76px !important;
-  margin:0 !important;
-  transform:translateY(0) !important;
-  box-sizing:border-box !important;
-}
-#shortsViewer .shorts-comment-footer .indtube-short-seekbar {
-  top:-2px !important;
-  left:0 !important;
-  right:0 !important;
-}
-@media (max-width:600px) {
-  #shortsViewer .shorts-stage,
-  #shortsViewer .shorts-comment-footer { max-width:none !important; }
+<!-- IndTube: fill the Shorts screen for true 9:16 portrait uploads -->
+<style id="indtube-shorts-portrait-fullbleed-fix">
+/* Only portrait Shorts use cover, so 9:16 videos fill the available stage
+   with no top/bottom letterboxing. Landscape uploads keep their full frame. */
+#shortsViewer #shortsIframeContainer video.indtube-native-short.indtube-portrait-fullbleed,
+#shortsViewer #shortsIframeContainer video.indtube-short-preload.indtube-portrait-fullbleed {
+  width:100% !important;
+  height:100% !important;
+  min-width:100% !important;
+  min-height:100% !important;
+  max-width:none !important;
+  max-height:none !important;
+  object-fit:cover !important;
+  object-position:center center !important;
+  background:#000 !important;
 }
 </style>
+<script id="indtube-shorts-portrait-fullbleed-detect">
+(function(){
+  'use strict';
+  const host = document.getElementById('shortsIframeContainer');
+  if (!host || host.dataset.portraitFillFix === '1') return;
+  host.dataset.portraitFillFix = '1';
+
+  function applyPortraitFit(video){
+    if (!(video instanceof HTMLVideoElement)) return;
+    const apply = function(){
+      const w = Number(video.videoWidth), h = Number(video.videoHeight);
+      if (!w || !h) return;
+      const ratio = w / h;
+      // 9:16 and similarly tall portrait clips should fill the Shorts stage.
+      video.classList.toggle('indtube-portrait-fullbleed', ratio <= 0.70);
+    };
+    if (video.readyState >= 1) apply();
+    video.addEventListener('loadedmetadata', apply, {passive:true});
+    video.addEventListener('resize', apply, {passive:true});
+  }
+
+  function scan(){
+    host.querySelectorAll('video.indtube-native-short, video.indtube-short-preload').forEach(applyPortraitFit);
+  }
+  scan();
+  new MutationObserver(scan).observe(host, {childList:true, subtree:true});
+})();
+</script>

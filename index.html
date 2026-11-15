@@ -2348,8 +2348,13 @@ async function loadRealVideoStats(videoId, channelId) {
       const ownViews = Math.max(0, Number(currentVideoObj.snippet.viewCount) || 0);
       if (viewsEl) viewsEl.textContent = ownViews.toLocaleString('en-IN');
     }
-    if (likesEl) likesEl.textContent = '—';
-    if (like) like.textContent = '—';
+    // IndTube videos start with zero likes; never show an underscore/dash.
+    if (likesEl) likesEl.textContent = '0';
+    videoBaseLikeCount = 0;
+    if (like) {
+      like.textContent = '0';
+      updateDisplayedLikeCount();
+    }
     const commentTag = document.getElementById('commentCountTag');
     const commentTotal = document.getElementById('commentTotal');
     if (commentTag) commentTag.textContent = '0';
@@ -2432,7 +2437,7 @@ async function loadRealVideoStats(videoId, channelId) {
     if (likesEl) likesEl.textContent = 'लोड नहीं हुआ';
     if (subsEl) subsEl.textContent = 'Subscribe';
     if (sub) sub.textContent = 'Subscriber count लोड नहीं हुआ';
-    if (like && like.textContent === '…') like.textContent = '—';
+    if (like && like.textContent === '…') like.textContent = '0';
     showWatchStatsError('वीडियो आँकड़े अभी उपलब्ध नहीं हैं। बाद में फिर कोशिश करें।');
   }
 }
@@ -7228,5 +7233,44 @@ html[data-short-direction="down"] .shorts-comment-footer.indtube-short-ui-enter 
   background:rgba(255,255,255,.86)!important;border-radius:8px!important;
   filter:blur(.35px);transform:scaleX(0);transform-origin:left center!important;
   will-change:transform;box-shadow:0 0 3px rgba(255,255,255,.24)!important;
+}
+</style>
+
+
+<style id="indtube-shorts-footer-and-seekbar-lift-final">
+/* Lift the Add a comment footer and its seek line together, leaving a small
+   bottom safe-area so Shorts content does not sit against the phone edge. */
+#shortsViewer {
+  box-sizing:border-box !important;
+  height:100vh !important;
+  height:100dvh !important;
+  padding:0 0 max(10px, env(safe-area-inset-bottom)) 0 !important;
+  margin:0 !important;
+  gap:0 !important;
+  overflow:hidden !important;
+}
+#shortsViewer .shorts-stage {
+  flex:1 1 0 !important;
+  min-height:0 !important;
+  margin:0 !important;
+  padding:0 !important;
+}
+#shortsViewer .shorts-comment-footer {
+  position:relative !important;
+  flex:0 0 76px !important;
+  height:76px !important;
+  min-height:76px !important;
+  margin:0 !important;
+  transform:translateY(0) !important;
+  box-sizing:border-box !important;
+}
+#shortsViewer .shorts-comment-footer .indtube-short-seekbar {
+  top:-2px !important;
+  left:0 !important;
+  right:0 !important;
+}
+@media (max-width:600px) {
+  #shortsViewer .shorts-stage,
+  #shortsViewer .shorts-comment-footer { max-width:none !important; }
 }
 </style>

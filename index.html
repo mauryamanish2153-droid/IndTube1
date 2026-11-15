@@ -6669,12 +6669,32 @@ html[data-short-direction="down"] .shorts-comment-footer.indtube-short-ui-enter 
         const detail = String(error?.message || error || 'Unknown Supabase error');
         statusEl.dataset.viewSaveError = detail;
         statusEl.title = 'View count save failed: ' + detail;
-        statusEl.textContent = (statusEl.textContent || 'IndTube video') + ' • Views save failed';
+        cleanLegacyViewErrorText();
       }
       return false;
     } finally {
       viewPendingEvents.delete(eventId);
     }
+  }
+
+  // Remove the legacy visible error text that older IndTube builds appended
+  // to the video metadata on every failed retry. Errors stay in the console only.
+  function cleanLegacyViewErrorText() {
+    const el = document.getElementById('watchVideoSubtext');
+    if (!el) return;
+    const cleaned = String(el.textContent || '')
+      .replace(/\s*[•·]\s*Views save failed/gi, '')
+      .replace(/\s*Views save failed/gi, '')
+      .replace(/\s{2,}/g, ' ')
+      .trim();
+    if (cleaned !== el.textContent) el.textContent = cleaned;
+  }
+
+  const legacyViewErrorObserver = new MutationObserver(() => cleanLegacyViewErrorText());
+  const watchSubtextNode = document.getElementById('watchVideoSubtext');
+  if (watchSubtextNode) {
+    legacyViewErrorObserver.observe(watchSubtextNode, {childList:true, characterData:true, subtree:true});
+    cleanLegacyViewErrorText();
   }
 
   function eligiblePlayer(video) {
@@ -7867,3 +7887,5 @@ html[data-short-direction="down"] .shorts-comment-footer.indtube-short-ui-enter 
   display: none !important;
 }
 </style>
+
+
